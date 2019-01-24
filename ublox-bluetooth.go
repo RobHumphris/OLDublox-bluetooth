@@ -45,6 +45,14 @@ func (ub *UbloxBluetooth) Write(data string) error {
 	return ub.serialPort.Write([]byte(append(d, tail...)))
 }
 
+// Close shuts down the serial port, can closes communication channels.
+func (ub *UbloxBluetooth) Close() {
+	ub.Close()
+	close(ub.readChannel)
+	close(ub.discoveryChannel)
+	close(ub.errorChannel)
+}
+
 func (ub *UbloxBluetooth) serialportReader() {
 	go ub.serialPort.ScanLines(ub.readChannel)
 	for {

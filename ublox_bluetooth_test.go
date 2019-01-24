@@ -29,5 +29,4 @@ func TestDiscovery(t *testing.T) {
 			loop = false
 		}
 	}
-
 }

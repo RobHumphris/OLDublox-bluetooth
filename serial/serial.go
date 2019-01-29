@@ -73,12 +73,15 @@ func (sp *SerialPort) Write(b []byte) error {
 
 // ScanLines reads a complete line from the serial port and sends the bytes
 // to the passed channel
-func (sp *SerialPort) ScanLines(ch chan []byte) error {
-	scanner := bufio.NewScanner(sp.file)
-	for scanner.Scan() {
-		ch <- scanner.Bytes()
+func (sp *SerialPort) ScanLines(ch chan []byte) {
+	fmt.Println("[ScanLines] Start")
+	defer fmt.Println("[ScanLines] End")
+	for {
+		scanner := bufio.NewScanner(sp.file)
+		for scanner.Scan() {
+			ch <- scanner.Bytes()
+		}
 	}
-	return fmt.Errorf("Scanner ended")
 }
 
 // Flush ensures unwritten bytes are pushed through the serial port.

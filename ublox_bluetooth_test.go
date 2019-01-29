@@ -6,27 +6,60 @@ import (
 	"time"
 )
 
-func TestDiscovery(t *testing.T) {
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", 6*time.Second)
+func TestFunctionality(t *testing.T) {
+	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", 1*time.Second)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
 
-	err = ub.Write(Discovery)
+	err = testDiscovery(ub, t)
+	if err != nil {
+		t.Errorf("TestDiscovery error %v\n", err)
+	}
+
+	time.Sleep(5 * time.Second)
+	err = testDiscovery(ub, t)
+	if err != nil {
+		t.Errorf("TestDiscovery error %v\n", err)
+	}
+
+	time.Sleep(1 * time.Second)
+	err = testConnect(ub, t)
+	if err != nil {
+		t.Errorf("TestConnect error %v\n", err)
+	}
+}
+
+func testDiscovery(ub *UbloxBluetooth, t *testing.T) error {
+	err := ub.Write(DiscoveryCommand())
 	if err != nil {
 		t.Fatalf("Write error %v\n", err)
 	}
 
-	loop := true
-	for loop {
-		select {
-		case discovered := <-ub.discoveryChannel:
+	discFn := func(d DataResponse) error {
+		if d.token == discovery {
+			discovered, err := NewDiscoveryReply(string(d.data[:]))
 			fmt.Printf("Descovered device: %v\n", discovered)
-		case err := <-ub.errorChannel:
-			fmt.Printf("Error recieved: %v\n", err)
-		case <-time.After(6 * time.Second):
-			fmt.Println("timeout")
-			loop = false
+			return err
 		}
+		return fmt.Errorf("Incorrect token %s for DiscoveryReply", d.token)
 	}
+
+	err = ub.WaitForResponse(discFn, (6 * time.Second))
+	return err
+}
+
+func testConnect(ub *UbloxBluetooth, t *testing.T) error {
+	err := ub.Write(ConnectCommand("C1851F6083F8r"))
+	if err != nil {
+		t.Fatalf("Write error %v\n", err)
+	}
+
+	dataFn := func(d DataResponse) error {
+		fmt.Printf("Connect responset token: %s data: %s\n", d.token, string(d.data[:]))
+		return nil
+	}
+
+	err = ub.WaitForResponse(dataFn, (6 * time.Second))
+	return err
 }

@@ -9,6 +9,12 @@ import (
 	"github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
+var (
+	tail      = []byte{'\r', '\n'}
+	separator = []byte(":")
+	empty     = ""
+)
+
 // DataResponse holds the Token at the start of the reply, and the subsequent data bytes
 type DataResponse struct {
 	token string
@@ -17,17 +23,13 @@ type DataResponse struct {
 
 // UbloxBluetooth holds the serial port, and the communication channels.
 type UbloxBluetooth struct {
-	lastCommand string
-	serialPort  *serial.SerialPort
-	readChannel chan []byte
-	//DiscoveryChannel chan *DiscoveryReply
+	lastCommand      string
+	serialPort       *serial.SerialPort
+	readChannel      chan []byte
 	DataChannel      chan DataResponse
 	ErrorChannel     chan error
 	CompletedChannel chan bool
 }
-
-// DiscoveryFunc is called when the UbloxBluetooth DiscoveryChannel receives a message
-//type DiscoveryFunc func(*DiscoveryReply) error
 
 // DataFunc is called when the UbloxBluetooth DataChannel recieves a message
 type DataFunc func(DataResponse) error
@@ -38,28 +40,29 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 	if err != nil {
 		return nil, err
 	}
+	sp.Flush()
 
 	ub := &UbloxBluetooth{
-		lastCommand: "",
-		serialPort:  sp,
-		readChannel: make(chan []byte),
-		//DiscoveryChannel: make(chan *DiscoveryReply),
+		lastCommand:      "",
+		serialPort:       sp,
+		readChannel:      make(chan []byte),
 		DataChannel:      make(chan DataResponse),
 		ErrorChannel:     make(chan error),
 		CompletedChannel: make(chan bool),
 	}
-	sp.Flush()
 
 	go ub.serialportReader()
 
-	return ub, nil
+	return ub, err
 }
 
-var tail = []byte("\r\n")
+func (ub *UbloxBluetooth) SetDeviceMode() error {
+	return nil
+}
 
 // Write writes the data string to Ublox via the SerialPort
 func (ub *UbloxBluetooth) Write(data string) error {
-	fmt.Printf("Writing %s to u-blox\n", data)
+	fmt.Printf("Writing %q to u-blox\n", data)
 	ub.lastCommand = data
 	return ub.serialPort.Write([]byte(append([]byte(data), tail...)))
 }
@@ -71,12 +74,6 @@ func (ub *UbloxBluetooth) WaitForResponse(datFn DataFunc, timeout time.Duration)
 	loop := true
 	for loop {
 		select {
-		/*case disCh := <-ub.DiscoveryChannel:
-		if disFn != nil {
-			err = disFn(disCh)
-		} else {
-			err = fmt.Errorf("No DiscoveryFunc defined")
-		}*/
 		case datCh := <-ub.DataChannel:
 			if datFn != nil {
 				err = datFn(datCh)
@@ -99,9 +96,11 @@ func (ub *UbloxBluetooth) WaitForResponse(datFn DataFunc, timeout time.Duration)
 
 // Close shuts down the serial port, can closes communication channels.
 func (ub *UbloxBluetooth) Close() {
-	ub.Close()
+	ub.serialPort.Close()
+
 	close(ub.readChannel)
-	//close(ub.DiscoveryChannel)
+	close(ub.DataChannel)
+	close(ub.CompletedChannel)
 	close(ub.ErrorChannel)
 }
 
@@ -111,28 +110,25 @@ func (ub *UbloxBluetooth) serialportReader() {
 	go ub.serialPort.ScanLines(ub.readChannel)
 	for {
 		b := <-ub.readChannel
-		if len(b) != 0 {
-			str := string(b[:])
+		if len(b) != 0 && !bytes.Equal(b, tail) {
+			str := strings.Trim(string(b[:]), "\r\n")
 			switch b[0] {
 			case 'A':
 				ub.processATCommands(str)
 			case '+':
 				ub.processCommandResponse(b)
 			default:
-				ub.handleMessage(str)
+				ub.handleGeneralMessage(str)
 			}
 		}
 	}
 }
 
-var separator = []byte(":")
-var empty = ""
-
 func (ub *UbloxBluetooth) processATCommands(str string) {
-	fmt.Println("[processATCommands] Read:", str)
-	if strings.HasPrefix(str, "AT+") {
+	fmt.Printf("[processATCommands] Read: %q Last Command: %q", str, ub.lastCommand)
+	if strings.HasPrefix(str, "AT") {
 		if ub.lastCommand != empty {
-			if ub.lastCommand == str {
+			if strings.HasPrefix(str, ub.lastCommand) {
 				fmt.Printf("Command %s echoed\n", str)
 				ub.lastCommand = empty
 				return
@@ -143,7 +139,7 @@ func (ub *UbloxBluetooth) processATCommands(str string) {
 }
 
 func (ub *UbloxBluetooth) processCommandResponse(b []byte) {
-	//fmt.Println("[processCommandResponse] Read:", string(b[:]))
+	fmt.Println("[processCommandResponse] Read:", string(b[:]))
 	d := bytes.Split(b, separator)
 	resp := DataResponse{
 		token: string(d[0][:]),
@@ -152,14 +148,15 @@ func (ub *UbloxBluetooth) processCommandResponse(b []byte) {
 	ub.DataChannel <- resp
 }
 
-func (ub *UbloxBluetooth) handleMessage(p string) {
+func (ub *UbloxBluetooth) handleGeneralMessage(p string) {
+	fmt.Printf("[handleGeneralMessage] Processing %s\n", p)
 	switch p {
 	case okMessage:
 		ub.CompletedChannel <- true
 	case errorMessage:
 		ub.ErrorChannel <- fmt.Errorf(p)
 	default:
-		ub.ErrorChannel <- fmt.Errorf("Cannot handle message %s", p)
+		ub.ErrorChannel <- fmt.Errorf("Cannot handle message %q", p)
 	}
 }
 

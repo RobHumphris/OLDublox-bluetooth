@@ -3,6 +3,7 @@ package ubloxbluetooth
 import "fmt"
 
 const discovery = "+UBTD"
+const extDataCommand = "ATO2"
 const connect = "+UBTACLC"
 const connected = "+UUBTACLC"
 

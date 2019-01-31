@@ -100,11 +100,11 @@ func (sp *SerialPort) ScanLines(ch chan []byte) {
 	for {
 		_, err := sp.file.Read(buf)
 		if err != nil {
-			fmt.Println("Read error ", err)
+			//fmt.Println("Read error ", err)
 		}
 		line = append(line, buf[0])
 		if bytes.HasSuffix(line, newline) {
-			fmt.Printf("%q\n", line)
+			//fmt.Printf("%q\n", line)
 			ch <- line
 			line = []byte{}
 		}

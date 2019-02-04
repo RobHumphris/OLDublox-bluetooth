@@ -96,6 +96,25 @@ func (ub *UbloxBluetooth) WaitForResponse(waitForData bool) ([]byte, error) {
 	}
 }
 
+type downloadhandler func([]byte) bool
+
+// HandleDataDownload handles data notifications
+func (ub *UbloxBluetooth) HandleDataDownload(expected int, fn downloadhandler) (int, error) {
+	received := 0
+	for {
+		select {
+		case data := <-ub.DataChannel:
+			received++
+			loop := fn(data)
+			if received == expected || !loop {
+				return received, nil
+			}
+		case <-time.After(ub.timeout):
+			return received, fmt.Errorf("Timeout")
+		}
+	}
+}
+
 // Close shuts down the serial port, can closes communication channels.
 func (ub *UbloxBluetooth) Close() {
 	ub.serialPort.Close()

@@ -10,6 +10,13 @@ var timeout = 6 * time.Second
 var password = []byte{'A', 'B', 'C'}
 
 func TestFloom(tt *testing.T) {
+	a := 1595
+	//b := 1595
+	b := 0
+	val := uint16(a - b)
+	count := uint16ToString(val)
+	cmd := append(readEventLogCommand, count...)
+	fmt.Println(cmd)
 }
 
 // TestDiscovery
@@ -89,6 +96,11 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		t.Errorf("EnableIndications error %v\n", err)
 	}
 
+	err = ub.EnableNotifications(cr)
+	if err != nil {
+		t.Errorf("EnableNotifications error %v\n", err)
+	}
+
 	unlocked, err := ub.UnlockDevice(cr, password)
 	if err != nil {
 		t.Errorf("UnlockDevice error %v\n", err)
@@ -116,6 +128,11 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		t.Errorf("ReadConfig error %v\n", err)
 	}
 	fmt.Printf("[ReadConfig] replied with: %v\n", config)
+
+	err = ub.DownloadLogFile(cr, info)
+	if err != nil {
+		t.Errorf("DownloadLogFile error %v\n", err)
+	}
 
 	err = ub.DisconnectFromDevice(cr)
 	if err != nil {

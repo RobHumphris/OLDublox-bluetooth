@@ -3,6 +3,8 @@ package ubloxbluetooth
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 // ATCommand issues a straight AT command - used to test connection
@@ -146,6 +148,44 @@ func (ub *UbloxBluetooth) ReadConfig(cr *ConnectionReply) (*ConfigReply, error) 
 	return NewConfigReply(d)
 }
 
-/*func (ub *UbloxBluetooth) DownloadLogFile(cr ConnectionReply) error {
-	err := ub.Write(WriteCharacteristicCommand(cr.Handle, commandValueHandle, readEventLogCommand
-}*/
+// DownloadLogFile requests a number of log records to be downloaded.
+func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, ir *InfoReply) error {
+	hex := uint16ToString(uint16(ir.CurrentSequenceNumber - ir.RecordsCount))
+	cmd := WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, readEventLogCommand, hex)
+	err := ub.Write(cmd)
+	if err != nil {
+		return err
+	}
+
+	d, err := ub.WaitForResponse(true)
+	if err != nil {
+		return err
+	}
+
+	expected, err := ProcessEventsReply(d)
+	if err != nil {
+		return err
+	}
+
+	data := []byte{}
+	received, err := ub.HandleDataDownload(expected, func(d []byte) bool {
+		data = append(data, d...)
+		if bytes.HasPrefix(d, gattNotificationResponse) {
+			d, e := splitOutNotification(d, "07")
+			err = e
+			fmt.Printf("Event data: %q\n", d)
+		} else if bytes.HasPrefix(d, gattIndicationResponse) {
+			_, e := splitOutResponse(d, "07")
+			fmt.Printf("\nIndicator Event\n")
+			err = e
+			return false
+		}
+		return true
+	})
+
+	fmt.Printf("expected %d received %d\n", expected, received)
+	if received != expected {
+		err = errors.Wrap(err, fmt.Sprintf("expected %d received %d\n", expected, received))
+	}
+	return err
+}

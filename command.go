@@ -27,6 +27,7 @@ const dataCCCDHandle = 17
 
 var rebootResponse = []byte("+STARTUP")
 var gattIndicationResponse = []byte("+UUBTGI:")
+var gattNotificationResponse = []byte("+UUBTGN:")
 var discoveryResponse = []byte("+UBTD:")
 
 var unlockCommand = []byte{0x00}
@@ -66,4 +67,8 @@ func WriteCharacteristicConfigurationCommand(connHandle int, descHandle int, con
 
 func WriteCharacteristicCommand(connHandle int, valueHandle int, data []byte) string {
 	return fmt.Sprintf("AT%s=%d,%d,%x", writeCharacteristic, connHandle, valueHandle, data)
+}
+
+func WriteCharacteristicHexCommand(connHandle int, valueHandle int, data []byte, hex string) string {
+	return fmt.Sprintf("AT%s=%d,%d,%x%s", writeCharacteristic, connHandle, valueHandle, data, hex)
 }

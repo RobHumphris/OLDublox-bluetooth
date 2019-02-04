@@ -31,9 +31,9 @@ type VersionReply struct {
 }
 
 type InfoReply struct {
-	CurrentTime    int
-	SequenceNumber int
-	RecordsCount   int
+	CurrentTime           int
+	CurrentSequenceNumber int
+	RecordsCount          int
 }
 
 type ConfigReply struct {
@@ -103,6 +103,10 @@ func isIndicationResponseValid(sa []string) bool {
 	return sa[0] == "0" && sa[1] == "13"
 }
 
+func isNotificationResponseValid(nr [][]byte) bool {
+	return nr[0][0] == 48 && nr[1][0] == 49 && nr[1][1] == 54
+}
+
 func splitOutResponse(d []byte, command string) (string, error) {
 	b := bytes.Split(d, gattIndicationResponse)
 	if len(b) < 2 {
@@ -113,11 +117,27 @@ func splitOutResponse(d []byte, command string) (string, error) {
 		return "", fmt.Errorf("unknown response")
 	}
 	if isIndicationResponseValid(tokens) {
-		if tokens[2][0:2] == command && tokens[2][2:4] == "00" {
+		status := tokens[2][2:4]
+		if tokens[2][0:2] == command && (status == "00" || status == "01") {
 			return tokens[2], nil
 		}
 	}
 	return "", fmt.Errorf("invalid response")
+}
+
+func splitOutNotification(d []byte, command string) ([]byte, error) {
+	b := bytes.Split(d, gattNotificationResponse)
+	if len(b) < 2 {
+		return nil, fmt.Errorf("incorrect response")
+	}
+	tokens := bytes.Split(b[1], comma)
+	if len(tokens) < 3 {
+		return nil, fmt.Errorf("unknown response")
+	}
+	if isNotificationResponseValid(tokens) {
+		return tokens[2], nil
+	}
+	return nil, fmt.Errorf("invalid response")
 }
 
 func stringToInt(s string) int {
@@ -129,6 +149,18 @@ func stringToInt(s string) int {
 		return int(binary.LittleEndian.Uint32(b))
 	}
 	return 0
+}
+
+func uint16ToString(i uint16) string {
+	b := make([]byte, 2)
+	binary.LittleEndian.PutUint16(b, i)
+	return hex.EncodeToString(b)
+}
+
+func uint32ToString(i uint32) string {
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, i)
+	return hex.EncodeToString(b)
 }
 
 // ProcessUnlockReply returns true or false flag for unlock - or an error
@@ -179,12 +211,13 @@ func NewInfoReply(d []byte) (*InfoReply, error) {
 	}
 
 	return &InfoReply{
-		CurrentTime:    stringToInt(t[4:12]),
-		SequenceNumber: stringToInt(t[12:16]),
-		RecordsCount:   stringToInt(t[16:20]),
+		CurrentTime:           stringToInt(t[4:12]),
+		CurrentSequenceNumber: stringToInt(t[12:16]),
+		RecordsCount:          stringToInt(t[16:20]),
 	}, nil
 }
 
+// NewConfigReply returns a ConfigReply if the bytes are all present and correct, if not... an Error!
 func NewConfigReply(d []byte) (*ConfigReply, error) {
 	t, err := splitOutResponse(d, "03")
 	if err != nil {
@@ -198,4 +231,15 @@ func NewConfigReply(d []byte) (*ConfigReply, error) {
 		SpareOne:            stringToInt(t[18:20]),
 		TemperatureOffset:   stringToInt(t[20:22]),
 	}, nil
+}
+
+// ProcessEventsReply returns the expected number of event notifications that we're about to receive.
+func ProcessEventsReply(d []byte) (int, error) {
+	t, err := splitOutResponse(d, "07")
+	if err != nil {
+		return -1, err
+	}
+
+	count := stringToInt(t[4:8])
+	return count, nil
 }

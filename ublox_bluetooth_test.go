@@ -134,8 +134,27 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		t.Errorf("DownloadLogFile error %v\n", err)
 	}
 
+	slotCount, err := ub.ReadSlotCount(cr)
+	if err != nil {
+		t.Errorf("ReadSlotCount error %v\n", err)
+	}
+	fmt.Printf("[ReadSlotCount] replied with: %v\n", slotCount)
+
+	slotInfo, err := ub.ReadSlotInfo(cr, 1)
+	if err != nil {
+		t.Errorf("ReadSlotInfo error %v\n", err)
+	}
+	fmt.Printf("[ReadSlotInfo] replied with: %v\n", slotInfo)
+
+	slotData, err := ub.ReadSlotData(cr, 1, 0)
+	if err != nil {
+		t.Errorf("ReadSlotData error %v\n", err)
+	}
+	fmt.Printf("[ReadSlotData] replied with: %v\n", slotData)
+
 	err = ub.DisconnectFromDevice(cr)
 	if err != nil {
 		t.Errorf("DisconnectFromDevice error %v\n", err)
 	}
+
 }

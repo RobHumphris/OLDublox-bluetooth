@@ -39,6 +39,10 @@ var readNameCommand = []byte{0x05}
 var writeNameCommand = []byte{0x06}
 var readEventLogCommand = []byte{0x07}
 
+var readSlotCountCommand = []byte{0x0E}
+var readSlotInfoCommand = []byte{0x0F}
+var readSlotDataCommand = []byte{0x10}
+
 var comma = []byte{0x2C}
 
 func ATCommand() string {

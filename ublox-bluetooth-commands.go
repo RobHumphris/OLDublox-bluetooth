@@ -189,3 +189,53 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, ir *InfoReply) er
 	}
 	return err
 }
+
+// ReadSlotCount get recorder slot count
+func (ub *UbloxBluetooth) ReadSlotCount(cr *ConnectionReply) (*SlotCountReply, error) {
+	err := ub.Write(WriteCharacteristicCommand(cr.Handle, commandValueHandle, readSlotCountCommand))
+	if err != nil {
+		return nil, err
+	}
+	d, err := ub.WaitForResponse(true)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("SlotCount result: %q\n", d)
+	return NewSlotCountReply(d)
+}
+
+// ReadSlotInfo get recorder's slot info for the provided slotNumber, returns a SlotInfoReply structure or an error
+func (ub *UbloxBluetooth) ReadSlotInfo(cr *ConnectionReply, slotNumber int) (*SlotInfoReply, error) {
+	err := ub.Write(WriteCharacteristicCommand(cr.Handle, commandValueHandle, readSlotInfoCommand))
+	if err != nil {
+		return nil, err
+	}
+	d, err := ub.WaitForResponse(true)
+	if err != nil {
+		return nil, err
+	}
+	return NewSlotInfoReply(d)
+}
+
+// ReadSlotData gets the data for the given slot and offset
+func (ub *UbloxBluetooth) ReadSlotData(cr *ConnectionReply, slotNumber int, offset int) (*SlotInfoReply, error) {
+	slot := uint16ToString(uint16(slotNumber))
+	off := uint16ToString(uint16(offset))
+	hex := slot + off
+	cmd := WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, readSlotDataCommand, hex)
+	err := ub.Write(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := ub.WaitForResponse(true)
+	if err != nil {
+		return nil, err
+	}
+
+	expected, err := ProcessSlotsReply(d)
+
+	fmt.Printf("%q\n", d)
+	fmt.Printf("Expected %d\n", expected)
+	return nil, nil
+}

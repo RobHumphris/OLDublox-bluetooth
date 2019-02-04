@@ -45,6 +45,16 @@ type ConfigReply struct {
 	TemperatureOffset   int
 }
 
+type SlotCountReply struct {
+	Count    int
+	rawCount string
+}
+
+type SlotInfoReply struct {
+	Time int
+	t    int
+}
+
 // NewDiscoveryReply takes the string and converts it to a DiscoveryReply
 func NewDiscoveryReply(d string) (*DiscoveryReply, error) {
 	t := strings.Split(d, ",")
@@ -242,4 +252,37 @@ func ProcessEventsReply(d []byte) (int, error) {
 
 	count := stringToInt(t[4:8])
 	return count, nil
+}
+
+func ProcessSlotsReply(d []byte) (int, error) {
+	// +UUBTGI:0,13,07E0
+	t, err := splitOutResponse(d, "10")
+	if err != nil {
+		return -1, err
+	}
+	count := stringToInt(t[4:8])
+	return count, nil
+}
+
+// NewSlotCountReply returns a SlotCountReply
+func NewSlotCountReply(d []byte) (*SlotCountReply, error) {
+	t, err := splitOutResponse(d, "0E")
+	if err != nil {
+		return nil, err
+	}
+	return &SlotCountReply{
+		Count:    stringToInt(t[4:8]),
+		rawCount: t[4:8],
+	}, nil
+}
+
+// NewSlotInfoReply returns a SlotInfoReply or error
+func NewSlotInfoReply(d []byte) (*SlotInfoReply, error) {
+	t, err := splitOutResponse(d, "0F")
+	if err != nil {
+		return nil, err
+	}
+	return &SlotInfoReply{
+		Time: stringToInt(t[4:8]),
+	}, nil
 }

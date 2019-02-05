@@ -56,6 +56,43 @@ func TestDiscovery(t *testing.T) {
 	}
 }
 
+func doConnect(ub *UbloxBluetooth, mac string, t *testing.T) {
+	cr, err := ub.ConnectToDevice(mac)
+	fmt.Printf("[ConnectToDevice] replied with: %v\n", cr)
+	if err != nil {
+		t.Errorf("TestConnect error %v\n", err)
+	}
+
+	defer ub.DisconnectFromDevice(cr)
+
+	if cr.BluetoothAddress != mac {
+		t.Errorf("ConnectToDevice - addresses do not match")
+	}
+	if cr.Type != 0 {
+		t.Errorf("ConnectToDevice - type is unknown should be zero")
+	}
+
+}
+
+func TestMultipleConnects(t *testing.T) {
+	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	if err != nil {
+		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+	}
+	defer ub.Close()
+
+	err = ub.RebootUblox()
+	if err != nil {
+		t.Fatalf("RebootUblox error %v\n", err)
+	}
+
+	doConnect(ub, "C1851F6083F8r", t)
+
+	doConnect(ub, "C1851F6083F8r", t)
+
+	doConnect(ub, "C1851F6083F8r", t)
+}
+
 // TestUbloxBluetoothCommands treads through the list of implemented commands
 func TestUbloxBluetoothCommands(t *testing.T) {
 	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
@@ -129,9 +166,14 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 	}
 	fmt.Printf("[ReadConfig] replied with: %v\n", config)
 
-	err = ub.DownloadLogFile(cr, info)
+	startingIndex := info.CurrentSequenceNumber - info.RecordsCount
+	data, err := ub.DownloadLogFile(cr, startingIndex)
 	if err != nil {
 		t.Errorf("DownloadLogFile error %v\n", err)
+	}
+
+	for i, d := range data {
+		fmt.Printf("Data[%d]: %q\n", i, d)
 	}
 
 	slotCount, err := ub.ReadSlotCount(cr)

@@ -74,12 +74,14 @@ func (ub *UbloxBluetooth) WaitForResponse(waitForData bool) ([]byte, error) {
 	for {
 		select {
 		case data := <-ub.DataChannel:
+			fmt.Printf("[Data Channel] %q\n", data)
 			d = append(d, data...)
 			dataReceived = true
 			if complete {
 				return d, nil
 			}
-		case _ = <-ub.CompletedChannel:
+		case cc := <-ub.CompletedChannel:
+			fmt.Printf("[CompletedChannel] %t\n", cc)
 			complete = true
 			if waitForData {
 				if dataReceived {

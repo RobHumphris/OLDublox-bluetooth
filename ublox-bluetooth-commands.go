@@ -217,14 +217,12 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 			}
 		} else if bytes.HasPrefix(d, gattIndicationResponse) {
 			_, e := splitOutResponse(d, "07")
-			fmt.Printf("\nIndicator Event\n")
 			err = errors.Wrapf(err, "notification error %v ", e)
 			return false
 		}
 		return true
 	})
 
-	fmt.Printf("expected %d received %d\n", expected, received)
 	if received != expected {
 		err = errors.Wrap(err, fmt.Sprintf("expected %d received %d\n", expected, received))
 	}
@@ -245,7 +243,6 @@ func (ub *UbloxBluetooth) ReadSlotCount(cr *ConnectionReply) (*SlotCountReply, e
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("SlotCount result: %q\n", d)
 	return NewSlotCountReply(d)
 }
 
@@ -288,7 +285,6 @@ func (ub *UbloxBluetooth) ReadSlotData(cr *ConnectionReply, slotNumber int, offs
 
 	expected, err := ProcessSlotsReply(d)
 
-	fmt.Printf("%q\n", d)
-	fmt.Printf("Expected %d\n", expected)
+	fmt.Printf("%q\nExpected %d\n", d, expected)
 	return nil, fmt.Errorf("NOT IMPLEMENTED")
 }

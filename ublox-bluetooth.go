@@ -61,7 +61,6 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 
 // Write writes the data string to Ublox via the SerialPort
 func (ub *UbloxBluetooth) Write(data string) error {
-	fmt.Printf("Writing %q to u-blox\n", data)
 	ub.lastCommand = data
 	return ub.serialPort.Write([]byte(append([]byte(data), tail...)))
 }
@@ -74,14 +73,12 @@ func (ub *UbloxBluetooth) WaitForResponse(waitForData bool) ([]byte, error) {
 	for {
 		select {
 		case data := <-ub.DataChannel:
-			fmt.Printf("[Data Channel] %q\n", data)
 			d = append(d, data...)
 			dataReceived = true
 			if complete {
 				return d, nil
 			}
-		case cc := <-ub.CompletedChannel:
-			fmt.Printf("[CompletedChannel] %t\n", cc)
+		case _ = <-ub.CompletedChannel:
 			complete = true
 			if waitForData {
 				if dataReceived {
@@ -128,8 +125,6 @@ func (ub *UbloxBluetooth) Close() {
 }
 
 func (ub *UbloxBluetooth) serialportReader() {
-	fmt.Println("[serialportReader] Start")
-	defer fmt.Println("[serialportReader] End")
 	go ub.serialPort.ScanLines(ub.readChannel)
 	for {
 		b := <-ub.readChannel
@@ -162,7 +157,7 @@ func (ub *UbloxBluetooth) processATCommands(b []byte) {
 
 func (ub *UbloxBluetooth) handleGeneralMessage(b []byte) {
 	str := strings.Trim(string(b[:]), "\r\n")
-	fmt.Printf("[handleGeneralMessage] Processing %s\n", str)
+
 	switch str {
 	case okMessage:
 		ub.CompletedChannel <- true

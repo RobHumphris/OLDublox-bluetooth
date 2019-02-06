@@ -42,7 +42,11 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 	if err != nil {
 		return nil, err
 	}
-	sp.Flush()
+
+	err = sp.Flush()
+	if err != nil {
+		return nil, err
+	}
 
 	ub := &UbloxBluetooth{
 		timeout:          timeout,
@@ -61,23 +65,30 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 
 // Write writes the data string to Ublox via the SerialPort
 func (ub *UbloxBluetooth) Write(data string) error {
+	//fmt.Printf("[Write] %s\n", data)
 	ub.lastCommand = data
 	return ub.serialPort.Write([]byte(append([]byte(data), tail...)))
 }
 
 // WaitForResponse waits until timeout for a response from
-func (ub *UbloxBluetooth) WaitForResponse(waitForData bool) ([]byte, error) {
+func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData bool) ([]byte, error) {
+	er := []byte(expectedResponse)
 	d := []byte{}
 	complete := false
 	dataReceived := false
 	for {
 		select {
 		case data := <-ub.DataChannel:
-			d = append(d, data...)
-			dataReceived = true
-			if complete {
-				return d, nil
+			if bytes.HasPrefix(data, er) {
+				d = append(d, data...)
+				dataReceived = true
+				if complete {
+					return d, nil
+				}
+			} else {
+				handleUnexpectedMessage(data)
 			}
+
 		case _ = <-ub.CompletedChannel:
 			complete = true
 			if waitForData {
@@ -93,6 +104,10 @@ func (ub *UbloxBluetooth) WaitForResponse(waitForData bool) ([]byte, error) {
 			return nil, fmt.Errorf("Timeout")
 		}
 	}
+}
+
+func handleUnexpectedMessage(data []byte) {
+	fmt.Printf("**** [handleUnexpectedMessage] %v ****\n", data)
 }
 
 type downloadhandler func([]byte) bool
@@ -130,6 +145,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 		b := <-ub.readChannel
 		b = bytes.Trim(b, newline)
 		if len(b) != 0 {
+			//fmt.Printf("[serialportReader] %s\n", b)
 			switch b[0] {
 			case 'A':
 				ub.processATCommands(b)

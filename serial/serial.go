@@ -19,7 +19,9 @@ type SerialPort struct {
 
 // OpenSerialPort opens the specified device with our default settings.
 func OpenSerialPort(devicename string, readTimeout time.Duration) (p *SerialPort, err error) {
-	baudrate := uint32(0x1002)
+	//fmt.Printf("[SerialPort] OpenSerialPort %s\n", devicename)
+	//unix.B460800
+	baudrate := uint32(unix.B115200)
 
 	f, err := os.OpenFile(devicename, unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0666)
 	if err != nil {

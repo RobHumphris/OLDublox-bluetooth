@@ -14,7 +14,9 @@ const echoOff = "ATE"
 const storeConfig = "AT&W"
 
 const powerOff = "+CPWROFF"
-const rebootResponse = "+STARTUP"
+const rebootResponseString = "+STARTUP"
+
+var rebootResponse = []byte(rebootResponseString)
 
 const discovery = "+UBTD"
 const discoveryResponseString = "+UBTD:"
@@ -111,7 +113,7 @@ func RS232SettingsCommand(cmd string) CmdResp {
 func RebootCommand() CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s", powerOff),
-		Resp: rebootResponse,
+		Resp: rebootResponseString,
 	}
 }
 

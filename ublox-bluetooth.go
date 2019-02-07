@@ -86,7 +86,10 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 					return d, nil
 				}
 			} else {
-				handleUnsolicitedMessage(data)
+				err := handleUnsolicitedMessage(data)
+				if err != nil {
+					return d, err
+				}
 			}
 
 		case _ = <-ub.CompletedChannel:
@@ -106,12 +109,16 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 	}
 }
 
-func handleUnsolicitedMessage(data []byte) {
+func handleUnsolicitedMessage(data []byte) error {
 	if bytes.HasPrefix(data, ubloxBTReponseHeader) {
 		// Todo - handle the likes of +UUBTLEPHYU:0,0,2,2
 	} else {
+		if bytes.HasPrefix(data, rebootResponse) {
+			return fmt.Errorf("Error device has rebooted")
+		}
 		fmt.Printf("**** [handleUnexpectedMessage] %s ****\n", data)
 	}
+	return nil
 }
 
 type downloadhandler func([]byte) bool

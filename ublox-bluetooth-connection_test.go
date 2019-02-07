@@ -4,25 +4,39 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/RobHumphris/rf-gateway/global"
+	retry "github.com/avast/retry-go"
+	"github.com/pkg/errors"
 )
 
 var timeout = 6 * time.Second
 var password = []byte{'A', 'B', 'C'}
 
-func doConnect(ub *UbloxBluetooth, mac string, t *testing.T) {
+func doConnect(ub *UbloxBluetooth, mac string, count int) error {
 	cr, err := ub.ConnectToDevice(mac)
-	fmt.Printf("[ConnectToDevice] replied with: %v\n", cr)
 	if err != nil {
-		t.Errorf("TestConnect error %v\n", err)
+		return errors.Wrapf(err, "TestConnect mac: %s count: %d\n", mac, count)
 	}
 	defer ub.DisconnectFromDevice(cr)
 
-	if cr.BluetoothAddress != mac {
-		t.Errorf("ConnectToDevice - addresses do not match")
+	time.Sleep(global.BluetoothPostConnectDelay)
+
+	err = ub.EnableNotifications(cr)
+	if err != nil {
+		return errors.Wrapf(err, "EnableNotifications mac: %s count: %d\n", mac, count)
 	}
-	if cr.Type != 0 {
-		t.Errorf("ConnectToDevice - type is unknown should be zero")
+
+	err = ub.EnableIndications(cr)
+	if err != nil {
+		return errors.Wrapf(err, "EnableIndications mac: %s count: %d\n", mac, count)
 	}
+
+	_, err = ub.UnlockDevice(cr, password)
+	if err != nil {
+		return errors.Wrapf(err, "UnlockDevice mac: %s count: %d\n", mac, count)
+	}
+	return nil
 }
 
 func TestMultipleConnects(t *testing.T) {
@@ -42,10 +56,20 @@ func TestMultipleConnects(t *testing.T) {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	for i := 0; i < 100; i++ {
-		fmt.Printf("Starting connect test %d\n", i)
-		doConnect(ub, "C1851F6083F8r", t)
-		doConnect(ub, "CE1A0B7E9D79r", t)
-		doConnect(ub, "D8CFDFA118ECr", t)
+	fmt.Printf("Starting connect test ")
+	for i := 0; i < 1000; i++ {
+		err = retry.Do(func() error {
+			fmt.Printf("%03d ", i)
+			e := doConnect(ub, "C1851F6083F8r", i)
+			if e != nil {
+				fmt.Printf("!")
+			}
+			return e
+		},
+			retry.Attempts(global.RetryCount),
+			retry.Delay(global.RetryWait))
+
+		//doConnect(ub, "CE1A0B7E9D79r", t)
+		//doConnect(ub, "D8CFDFA118ECr", t)
 	}
 }

@@ -23,7 +23,7 @@ func retryCall(fn func(*UbloxBluetooth, string) error, ub *UbloxBluetooth, mac s
 			return nil
 		}
 		global.Debugf("Call failed on device %s, retrying", mac)
-		time.Sleep(3 * time.Second)
+		time.Sleep(global.RetryWait)
 		e := ub.ATCommand()
 		if e != nil {
 			// we cannot continue
@@ -82,6 +82,7 @@ func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
 		return err
 	}
 	fmt.Printf("[ReadConfig] replied with: %v\n", config)
+
 	return nil
 }
 

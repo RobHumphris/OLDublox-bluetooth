@@ -9,13 +9,6 @@ import (
 	"github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
-var (
-	tail      = []byte{'\r', '\n'}
-	newline   = "\r\n"
-	separator = []byte(":")
-	empty     = ""
-)
-
 // DataResponse holds the Token at the start of the reply, and the subsequent data bytes
 type DataResponse struct {
 	token string
@@ -45,6 +38,7 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 
 	err = sp.Flush()
 	if err != nil {
+		sp.Close()
 		return nil, err
 	}
 
@@ -70,7 +64,13 @@ func (ub *UbloxBluetooth) Write(data string) error {
 	return ub.serialPort.Write([]byte(append([]byte(data), tail...)))
 }
 
-// WaitForResponse waits until timeout for a response from
+/*func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData bool) ([]byte, error) {
+	d, e := ub.waitForResponse(expectedResponse, waitForData)
+	//time.Sleep(global.BluetoothCommsDelay)
+	return d, e
+}*/
+
+// WaitForResponse waits until timeout for a response from the Ublox device
 func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData bool) ([]byte, error) {
 	er := []byte(expectedResponse)
 	d := []byte{}
@@ -86,7 +86,7 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 					return d, nil
 				}
 			} else {
-				handleUnexpectedMessage(data)
+				handleUnsolicitedMessage(data)
 			}
 
 		case _ = <-ub.CompletedChannel:
@@ -106,8 +106,12 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 	}
 }
 
-func handleUnexpectedMessage(data []byte) {
-	fmt.Printf("**** [handleUnexpectedMessage] %v ****\n", data)
+func handleUnsolicitedMessage(data []byte) {
+	if bytes.HasPrefix(data, ubloxBTReponseHeader) {
+		// Todo - handle the likes of +UUBTLEPHYU:0,0,2,2
+	} else {
+		fmt.Printf("**** [handleUnexpectedMessage] %s ****\n", data)
+	}
 }
 
 type downloadhandler func([]byte) bool

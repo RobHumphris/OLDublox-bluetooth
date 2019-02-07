@@ -3,7 +3,6 @@ package ubloxbluetooth
 import (
 	"fmt"
 	"testing"
-	"time"
 )
 
 const serviceUUIDLength = 42
@@ -27,7 +26,6 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 	if err != nil {
 		t.Errorf("AT error %v\n", err)
 	}
-	time.Sleep(1 * time.Second)
 
 	discovered, err := ub.DiscoveryCommand()
 	if err != nil {
@@ -60,7 +58,6 @@ func exerciseTheDevice(deviceAddr string, ub *UbloxBluetooth, t *testing.T) {
 	if cr.Type != 0 {
 		t.Errorf("ConnectToDevice - type is unknown should be zero")
 	}
-	time.Sleep(1 * time.Second)
 
 	err = ub.EnableIndications(cr)
 	if err != nil {

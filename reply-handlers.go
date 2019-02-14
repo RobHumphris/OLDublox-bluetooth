@@ -5,11 +5,28 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
 )
+
+const unlockReply = "00"
+const unlockSuccess = "0000"
+const statusOk = "00"
+const statusPending = "01"
+const versionReply = "01"
+const infoReply = "02"
+const readConfigReply = "03"
+const writeConfigReply = "04"
+const readNameReply = "05"
+const writeNameReply = "06"
+const readEventLogReply = "07"
+const clearEventLogReply = "08"
+const readSlotCountReply = "0E"
+const readSlotInfoReply = "0F"
+const readSlotDataReply = "10"
 
 func isIndicationResponseValid(sa []string) bool {
 	return sa[0] == "0" && sa[1] == "13"
@@ -30,7 +47,7 @@ func splitOutResponse(d []byte, command string) (string, error) {
 	}
 	if isIndicationResponseValid(tokens) {
 		status := tokens[2][2:4]
-		if tokens[2][0:2] == command && (status == "00" || status == "01") {
+		if tokens[2][0:2] == command && (status == statusOk || status == statusPending) {
 			return tokens[2], nil
 		}
 	}
@@ -61,6 +78,12 @@ func stringToInt(s string) int {
 		return int(binary.LittleEndian.Uint32(b))
 	}
 	return 0
+}
+
+func stringToFloat32(s string) float32 {
+	b, _ := hex.DecodeString(s)
+	intVal := binary.LittleEndian.Uint32(b)
+	return math.Float32frombits(intVal)
 }
 
 func uint16ToString(i uint16) string {
@@ -131,7 +154,7 @@ func NewConnectionReply(d string) (*ConnectionReply, error) {
 
 // NewVersionReply returns a new VersionReply - or an error
 func NewVersionReply(d []byte) (*VersionReply, error) {
-	t, err := splitOutResponse(d, "01")
+	t, err := splitOutResponse(d, versionReply)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +167,7 @@ func NewVersionReply(d []byte) (*VersionReply, error) {
 
 // NewInfoReply returns an InfoReply if the bytes are right, or an error if they're not
 func NewInfoReply(d []byte) (*InfoReply, error) {
-	t, err := splitOutResponse(d, "02")
+	t, err := splitOutResponse(d, infoReply)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +181,7 @@ func NewInfoReply(d []byte) (*InfoReply, error) {
 
 // NewConfigReply returns a ConfigReply if the bytes are all present and correct, if not... an Error!
 func NewConfigReply(d []byte) (*ConfigReply, error) {
-	t, err := splitOutResponse(d, "03")
+	t, err := splitOutResponse(d, readConfigReply)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +197,7 @@ func NewConfigReply(d []byte) (*ConfigReply, error) {
 
 // NewSlotCountReply returns a SlotCountReply
 func NewSlotCountReply(d []byte) (*SlotCountReply, error) {
-	t, err := splitOutResponse(d, "0E")
+	t, err := splitOutResponse(d, readSlotCountReply)
 	if err != nil {
 		return nil, err
 	}
@@ -184,24 +207,87 @@ func NewSlotCountReply(d []byte) (*SlotCountReply, error) {
 	}, nil
 }
 
-// NewSlotInfoReply returns a SlotInfoReply or error
+/*
+typedef struct
+{
+	// need to match recorder - whoops !!
+	// not great here - so we will have to manually update !!!
+	uint32_t time;
+	uint16_t slot;
+	uint16_t dwords;
+	float    odr;  // should this be a float??
+	uint16_t temp;
+	uint16_t vbatt;
+	uint16_t vin;
+
+  } veh_slot_info_t;
+*/ // NewSlotInfoReply returns a SlotInfoReply or error
 func NewSlotInfoReply(d []byte) (*SlotInfoReply, error) {
-	t, err := splitOutResponse(d, "0F")
+	fmt.Printf("Length: %d\n", len(d))
+	t, err := splitOutResponse(d, readSlotInfoReply)
 	if err != nil {
 		return nil, err
 	}
 	return &SlotInfoReply{
-		Time: stringToInt(t[4:8]),
+		Time:           stringToInt(t[4:12]),
+		Slot:           stringToInt(t[12:16]),
+		Bytes:          stringToInt(t[16:20]) * 4,
+		SampleRate:     stringToFloat32(t[20:28]),
+		Temperature:    stringToInt(t[28:32]),
+		BatteryVoltage: stringToInt(t[32:36]),
+		VoltageIn:      stringToInt(t[36:40]),
 	}, nil
 }
 
 // ProcessUnlockReply returns true or false flag for unlock - or an error
 func ProcessUnlockReply(d []byte) (bool, error) {
-	t, err := splitOutResponse(d, "00")
+	t, err := splitOutResponse(d, unlockReply)
 	if err != nil {
 		return false, err
 	}
-	return (t == "0000"), nil
+	return (t == unlockSuccess), nil
+}
+
+// ProcessRS232SettingsReply processes the passed bytes for the RS232 settings
+func ProcessRS232SettingsReply(d []byte) (*RS232SettingsReply, error) {
+	var err error
+	b := bytes.Split(d, rs232SettingsResponse)
+	if len(b) < 2 {
+		return nil, fmt.Errorf("incorrect response")
+	}
+	tokens := strings.Split(string(b[1]), ",")
+	if len(tokens) < 3 {
+		return nil, fmt.Errorf("unknown response")
+	}
+
+	rsRply := RS232SettingsReply{}
+
+	rsRply.BaudRate, err = strconv.Atoi(tokens[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "Baud conversion error")
+	}
+
+	rsRply.FlowControl, err = strconv.Atoi(tokens[1])
+	if err != nil {
+		return nil, errors.Wrap(err, "FlowControl conversion error")
+	}
+
+	rsRply.DataBits, err = strconv.Atoi(tokens[2])
+	if err != nil {
+		return nil, errors.Wrap(err, "DataBits conversion error")
+	}
+
+	rsRply.StopBits, err = strconv.Atoi(tokens[3])
+	if err != nil {
+		return nil, errors.Wrap(err, "StopBits conversion error")
+	}
+
+	rsRply.Parity, err = strconv.Atoi(tokens[4])
+	if err != nil {
+		return nil, errors.Wrap(err, "Parity conversion error")
+	}
+
+	return &rsRply, nil
 }
 
 // ProcessDiscoveryReply returns an array of DiscoveryReplys and a error
@@ -224,7 +310,7 @@ func ProcessDiscoveryReply(d []byte) ([]DiscoveryReply, error) {
 
 // ProcessEventsReply returns the expected number of event notifications that we're about to receive.
 func ProcessEventsReply(d []byte) (int, error) {
-	t, err := splitOutResponse(d, "07")
+	t, err := splitOutResponse(d, readEventLogReply)
 	if err != nil {
 		return -1, err
 	}
@@ -233,10 +319,16 @@ func ProcessEventsReply(d []byte) (int, error) {
 	return count, nil
 }
 
+// ProcessClearEventReply checks the response and raises an error if things do not behave as they should.
+func ProcessClearEventReply(d []byte) error {
+	_, err := splitOutResponse(d, clearEventLogReply)
+	return err
+}
+
 // ProcessSlotsReply returns a count of available slots.
 func ProcessSlotsReply(d []byte) (int, error) {
-	// +UUBTGI:0,13,07E0
-	t, err := splitOutResponse(d, "10")
+	// +UUBTGI:0,13,10012603
+	t, err := splitOutResponse(d, readSlotDataReply)
 	if err != nil {
 		return -1, err
 	}

@@ -11,18 +11,37 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var verbose = false
+
+// SetVerbose sets the logging level
+func SetVerbose(v bool) {
+	verbose = v
+}
+
+func showMsg(format string, v ...interface{}) {
+	if verbose {
+		fmt.Printf(format, v...)
+	}
+}
+
 // SerialPort holds the file and file descriptor for the serial port
 type SerialPort struct {
 	file *os.File
 	fd   uintptr
 }
 
+// BaudRate is a type used for enumerating the permissible rates in our system.
+type BaudRate uint32
+
+const (
+	// Default baud is 115k
+	Default BaudRate = unix.B115200
+	// HighSpeed baud is 1m
+	HighSpeed BaudRate = unix.B1000000
+)
+
 // OpenSerialPort opens the specified device with our default settings.
 func OpenSerialPort(devicename string, readTimeout time.Duration) (p *SerialPort, err error) {
-	//fmt.Printf("[SerialPort] OpenSerialPort %s\n", devicename)
-	//unix.B460800
-	baudrate := uint32(unix.B115200)
-
 	f, err := os.OpenFile(devicename, unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0666)
 	if err != nil {
 		return nil, err
@@ -36,11 +55,29 @@ func OpenSerialPort(devicename string, readTimeout time.Duration) (p *SerialPort
 	}()
 
 	fd := f.Fd()
+
+	unix.SetNonblock(int(fd), false)
+	if err != nil {
+		return nil, fmt.Errorf("[OpenPort] set non block error: %v", err)
+	}
+
+	sp := &SerialPort{
+		file: f,
+		fd:   fd}
+
+	sp.SetBaudRate(HighSpeed, readTimeout)
+
+	return sp, nil
+}
+
+// SetBaudRate sets the serialport's speed to the passed value
+func (sp *SerialPort) SetBaudRate(baudrate BaudRate, readTimeout time.Duration) error {
+	br := uint32(baudrate)
 	t := unix.Termios{
 		Iflag:  unix.IGNPAR,
-		Cflag:  unix.CREAD | unix.CLOCAL | unix.IGNCR | baudrate | unix.CS8,
-		Ispeed: baudrate,
-		Ospeed: baudrate,
+		Cflag:  unix.CREAD | unix.CLOCAL | unix.IGNCR | br | unix.CS8,
+		Ispeed: br,
+		Ospeed: br,
 	}
 
 	t.Cc[unix.VMIN] = uint8(0x00)
@@ -48,7 +85,7 @@ func OpenSerialPort(devicename string, readTimeout time.Duration) (p *SerialPort
 
 	_, _, errno := unix.Syscall6(
 		unix.SYS_IOCTL,
-		uintptr(fd),
+		uintptr(sp.fd),
 		uintptr(unix.TCSETS),
 		uintptr(unsafe.Pointer(&t)),
 		0,
@@ -57,21 +94,14 @@ func OpenSerialPort(devicename string, readTimeout time.Duration) (p *SerialPort
 	)
 
 	if errno != 0 {
-		return nil, fmt.Errorf("[OpenPort] ioctl error: %d", errno)
+		return fmt.Errorf("[OpenPort] ioctl error: %d", errno)
 	}
-
-	unix.SetNonblock(int(fd), false)
-	if err != nil {
-		return nil, fmt.Errorf("[OpenPort] set non block error: %v", err)
-	}
-
-	return &SerialPort{
-		file: f,
-		fd:   fd}, nil
+	return nil
 }
 
 // Write write's the passed byte array to the serial port
 func (sp *SerialPort) Write(b []byte) error {
+	showMsg("W: %s", b)
 	_, err := sp.file.Write(b)
 	return err
 }
@@ -105,7 +135,10 @@ func (sp *SerialPort) ScanLines(ch chan []byte) {
 		}
 		line = append(line, buf[0])
 		if bytes.HasSuffix(line, newline) {
-			ch <- line
+			if len(line) > 2 {
+				showMsg("R: %s", line)
+				ch <- line
+			}
 			line = []byte{}
 		}
 	}
@@ -113,7 +146,6 @@ func (sp *SerialPort) ScanLines(ch chan []byte) {
 
 // Flush ensures unwritten bytes are pushed through the serial port.
 func (sp *SerialPort) Flush() error {
-	fmt.Println("[SerialPort] Flush")
 	_, _, errno := unix.Syscall(
 		unix.SYS_IOCTL,
 		uintptr(sp.fd),
@@ -129,6 +161,5 @@ func (sp *SerialPort) Flush() error {
 
 // Close closes the file
 func (sp *SerialPort) Close() (err error) {
-	fmt.Println("[SerialPort] Close")
 	return sp.file.Close()
 }

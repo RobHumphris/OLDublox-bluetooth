@@ -10,7 +10,11 @@ const empty = ""
 const newline = "\r\n"
 const at = "AT"
 const rs232Settings = "+UMRS"
-const echoOff = "ATE"
+const rs232SettingsResponseString = "+UMRS:"
+
+var rs232SettingsResponse = []byte(rs232SettingsResponseString)
+
+const echoOff = "ATE0"
 const storeConfig = "AT&W"
 
 const powerOff = "+CPWROFF"
@@ -45,6 +49,8 @@ const writeCharacteristic = "+UBTGW"
 const writeCharacteristicResponseString = ""
 const writeCharacteristicConfig = "+UBTGWC"
 
+const readCharacterisitic = "+UBTGR"
+
 const errorMessage = "ERROR"
 const okMessage = "OK"
 
@@ -59,18 +65,6 @@ var ubloxBTReponseHeader = []byte("+UUBT")
 var gattIndicationResponse = []byte(gattIndicationResponseString)
 var gattNotificationResponse = []byte("+UUBTGN:")
 var blePHYUpdateResponse = []byte("+UUBTLEPHYU:")
-
-var unlockCommand = []byte{0x00}
-var versionCommand = []byte{0x01}
-var infoCommand = []byte{0x02}
-var readConfigCommand = []byte{0x03}
-var writeConfigCommand = []byte{0x04}
-var readNameCommand = []byte{0x05}
-var writeNameCommand = []byte{0x06}
-var readEventLogCommand = []byte{0x07}
-var readSlotCountCommand = []byte{0x0E}
-var readSlotInfoCommand = []byte{0x0F}
-var readSlotDataCommand = []byte{0x10}
 
 var tail = []byte{'\r', '\n'}
 var separator = []byte(":")
@@ -100,13 +94,15 @@ func EchoOffCommand() CmdResp {
 
 // RS232SettingsCommand gets or sets the ublox serial port settings
 func RS232SettingsCommand(cmd string) CmdResp {
-	r := CmdResp{}
 	if cmd == "" {
-		r.Cmd = fmt.Sprintf("AT%s?", rs232Settings)
+		cmd = fmt.Sprintf("AT%s?", rs232Settings)
+	} else {
+		cmd = fmt.Sprintf("AT%s=%s", rs232Settings, cmd)
 	}
-	r.Cmd = fmt.Sprintf("AT%s=%s", rs232Settings, cmd)
-	r.Resp = empty
-	return r
+	return CmdResp{
+		Cmd:  cmd,
+		Resp: rs232SettingsResponseString,
+	}
 }
 
 // RebootCommand - demands a reboot
@@ -172,6 +168,13 @@ func DisconnectCommand(handle int) CmdResp {
 func WriteCharacteristicConfigurationCommand(connHandle int, descHandle int, config int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d,%d,%d", writeCharacteristicConfig, connHandle, descHandle, config),
+		Resp: empty,
+	}
+}
+
+func ReadCharacterisiticCommand(connHandle int, valueHandle int) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT%s=%d,%d", readCharacterisitic, connHandle, valueHandle),
 		Resp: empty,
 	}
 }

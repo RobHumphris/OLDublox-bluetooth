@@ -8,6 +8,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+var unlockCommand = []byte{0x00}
+var versionCommand = []byte{0x01}
+var infoCommand = []byte{0x02}
+var readConfigCommand = []byte{0x03}
+var writeConfigCommand = []byte{0x04}
+var readNameCommand = []byte{0x05}
+var writeNameCommand = []byte{0x06}
+var readEventLogCommand = []byte{0x07}
+var clearEventLogCommand = []byte{0x08}
+var abortCommand = []byte{0x09}
+var readSlotCountCommand = []byte{0x0E}
+var readSlotInfoCommand = []byte{0x0F}
+var readSlotDataCommand = []byte{0x10}
+
 func (ub *UbloxBluetooth) writeAndWait(r CmdResp, waitForData bool) ([]byte, error) {
 	err := ub.Write(r.Cmd)
 	if err != nil {
@@ -29,10 +43,12 @@ func (ub *UbloxBluetooth) EchoOff() error {
 }
 
 // GetRS232Settings allows us to see how the Ublox comms are configured
-func (ub *UbloxBluetooth) GetRS232Settings() error {
+func (ub *UbloxBluetooth) GetRS232Settings() (*RS232SettingsReply, error) {
 	b, err := ub.writeAndWait(RS232SettingsCommand(""), true)
-	fmt.Printf("Fishbin! %s\n", b)
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return ProcessRS232SettingsReply(b)
 }
 
 // ConfigureUblox setups the ublox module
@@ -42,12 +58,12 @@ func (ub *UbloxBluetooth) ConfigureUblox() error {
 		return err
 	}
 
-	_, err = ub.writeAndWait(BLEConfig(minConnectionInterval, 6), false)
+	_, err = ub.writeAndWait(BLEConfig(minConnectionInterval, 24), false)
 	if err != nil {
 		return err
 	}
 
-	_, err = ub.writeAndWait(BLEConfig(maxConnectionInterval, 6), false)
+	_, err = ub.writeAndWait(BLEConfig(maxConnectionInterval, 40), false)
 	if err != nil {
 		return err
 	}
@@ -121,6 +137,19 @@ func (ub *UbloxBluetooth) EnableNotifications(cr *ConnectionReply) error {
 	return err
 }
 
+// ReadCharacterisitic reads the
+func (ub *UbloxBluetooth) ReadCharacterisitic(cr *ConnectionReply) ([]byte, error) {
+	if cr == nil {
+		return nil, fmt.Errorf("ConnectionReply is nil")
+	}
+	d, err := ub.writeAndWait(ReadCharacterisiticCommand(cr.Handle, commandValueHandle), true)
+	if err != nil {
+		return nil, errors.Wrapf(err, "ReadCharacterisitic error")
+	}
+	fmt.Printf("ReadCharacterisitic: %s\n", d)
+	return d, nil
+}
+
 // UnlockDevice attempts to unlock the device with the password provided.
 func (ub *UbloxBluetooth) UnlockDevice(cr *ConnectionReply, password []byte) (bool, error) {
 	if cr == nil {
@@ -129,8 +158,11 @@ func (ub *UbloxBluetooth) UnlockDevice(cr *ConnectionReply, password []byte) (bo
 
 	d, err := ub.writeAndWait(WriteCharacteristicCommand(cr.Handle, commandValueHandle, append(unlockCommand, password...)), true)
 	if err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "UnlockDevice error")
 	}
+
+	ub.ReadCharacterisitic(cr)
+
 	return ProcessUnlockReply(d)
 }
 
@@ -142,7 +174,7 @@ func (ub *UbloxBluetooth) GetVersion(cr *ConnectionReply) (*VersionReply, error)
 
 	d, err := ub.writeAndWait(WriteCharacteristicCommand(cr.Handle, commandValueHandle, versionCommand), true)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "GetVersion error")
 	}
 	return NewVersionReply(d)
 }
@@ -155,8 +187,11 @@ func (ub *UbloxBluetooth) GetInfo(cr *ConnectionReply) (*InfoReply, error) {
 
 	d, err := ub.writeAndWait(WriteCharacteristicCommand(cr.Handle, commandValueHandle, infoCommand), true)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "GetInfo error")
 	}
+
+	ub.ReadCharacterisitic(cr)
+
 	return NewInfoReply(d)
 }
 
@@ -168,32 +203,34 @@ func (ub *UbloxBluetooth) ReadConfig(cr *ConnectionReply) (*ConfigReply, error) 
 
 	d, err := ub.writeAndWait(WriteCharacteristicCommand(cr.Handle, commandValueHandle, readConfigCommand), true)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "ReadConfig error")
 	}
 	return NewConfigReply(d)
 }
 
+type DownloadLogHandler func([]byte) error
+
 // DownloadLogFile requests a number of log records to be downloaded.
-func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int) ([][]byte, error) {
+func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int, fn DownloadLogHandler) error { //([][]byte, error) {
 	if cr == nil {
-		return nil, fmt.Errorf("ConnectionReply is nil")
+		return fmt.Errorf("ConnectionReply is nil")
 	}
 	si := uint16ToString(uint16(startingIndex))
-	d, err := ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, readEventLogCommand, si), true)
-	if err != nil {
-		return nil, err
+	d, errr := ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, readEventLogCommand, si), true)
+	if errr != nil {
+		return errr
 	}
 
-	expected, err := ProcessEventsReply(d)
-	if err != nil {
-		return nil, err
+	expected, errr := ProcessEventsReply(d)
+	if errr != nil {
+		return errr
 	}
 
-	data := make([][]byte, expected)
-	i := 0
-	received, err := ub.HandleDataDownload(expected, func(d []byte) bool {
+	//data := make([][]byte, expected)
+	received, errr := ub.HandleDataDownload(expected, func(d []byte) (bool, error) {
+		var err error
 		if bytes.HasPrefix(d, gattNotificationResponse) {
-			d, e := splitOutNotification(d, "07")
+			d, e := splitOutNotification(d, readEventLogReply)
 			if e != nil {
 				err = errors.Wrapf(err, e.Error())
 			} else {
@@ -201,22 +238,48 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 				if e != nil {
 					err = errors.Wrapf(err, e.Error())
 				} else {
-					data[i] = dt
-					i++
+					e = fn(dt)
+					if e != nil {
+						err = errors.Wrapf(err, e.Error())
+					}
 				}
 			}
 		} else if bytes.HasPrefix(d, gattIndicationResponse) {
-			_, e := splitOutResponse(d, "07")
+			_, e := splitOutResponse(d, readEventLogReply)
 			err = errors.Wrapf(err, "notification error %v ", e)
-			return false
+			return false, err
 		}
-		return true
+		return true, err
 	})
 
 	if received != expected {
-		err = errors.Wrap(err, fmt.Sprintf("expected %d received %d\n", expected, received))
+		errr = errors.Wrap(errr, fmt.Sprintf("expected %d received %d\n", expected, received))
 	}
-	return data, err
+	//return data, err
+	return errr
+}
+
+// ClearEventLog requests that the event log of the connected device be cleared.
+func (ub *UbloxBluetooth) ClearEventLog(cr *ConnectionReply) error {
+	if cr == nil {
+		return fmt.Errorf("ConnectionReply is nil")
+	}
+
+	d, err := ub.writeAndWait(WriteCharacteristicCommand(cr.Handle, commandValueHandle, clearEventLogCommand), true)
+	if err != nil {
+		return errors.Wrap(err, "ClearEventLog error")
+	}
+	return ProcessClearEventReply(d)
+}
+
+// AbortEventLogRead aborts the read
+func (ub *UbloxBluetooth) AbortEventLogRead(cr *ConnectionReply) error {
+	if cr == nil {
+		return fmt.Errorf("ConnectionReply is nil")
+	}
+
+	_, err := ub.writeAndWait(WriteCharacteristicCommand(cr.Handle, commandValueHandle, abortCommand), false)
+	return err
 }
 
 // ReadSlotCount get recorder slot count
@@ -227,7 +290,7 @@ func (ub *UbloxBluetooth) ReadSlotCount(cr *ConnectionReply) (*SlotCountReply, e
 
 	d, err := ub.writeAndWait(WriteCharacteristicCommand(cr.Handle, commandValueHandle, readSlotCountCommand), true)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "ReadSlotCount error")
 	}
 	return NewSlotCountReply(d)
 }
@@ -238,7 +301,8 @@ func (ub *UbloxBluetooth) ReadSlotInfo(cr *ConnectionReply, slotNumber int) (*Sl
 		return nil, fmt.Errorf("ConnectionReply is nil")
 	}
 
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(cr.Handle, commandValueHandle, readSlotInfoCommand), true)
+	slot := uint16ToString(uint16(slotNumber))
+	d, err := ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, readSlotInfoCommand, slot), true)
 	if err != nil {
 		return nil, err
 	}
@@ -246,20 +310,56 @@ func (ub *UbloxBluetooth) ReadSlotInfo(cr *ConnectionReply, slotNumber int) (*Sl
 }
 
 // ReadSlotData gets the data for the given slot and offset
-func (ub *UbloxBluetooth) ReadSlotData(cr *ConnectionReply, slotNumber int, offset int) ([]byte, error) {
+func (ub *UbloxBluetooth) ReadSlotData(cr *ConnectionReply, slotNumber int, offset int, requiredBytes int) ([]byte, error) {
 	if cr == nil {
 		return nil, fmt.Errorf("ConnectionReply is nil")
 	}
 
 	slot := uint16ToString(uint16(slotNumber))
 	off := uint16ToString(uint16(offset))
-	hex := slot + off
-	d, err := ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, readSlotDataCommand, hex), true)
+	d, err := ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, readSlotDataCommand, slot+off), true)
 	if err != nil {
 		return nil, err
 	}
 
-	expected, err := ProcessSlotsReply(d)
-	fmt.Printf("%q\nExpected %d\n", d, expected)
-	return nil, fmt.Errorf("NOT IMPLEMENTED")
+	expectedNotifications, err := ProcessSlotsReply(d)
+	actualNotifications := 0
+	data := []byte{}
+	_, err = ub.HandleDataDownload(expectedNotifications, func(d []byte) (bool, error) {
+		if bytes.HasPrefix(d, gattNotificationResponse) {
+			actualNotifications++
+			d, e := splitOutNotification(d, readSlotInfoReply)
+			if e != nil {
+				return false, e
+			}
+			bytes, e := hex.DecodeString(string(d[:]))
+			if err != nil {
+				return false, err
+			}
+			data = append(data, bytes...)
+			if len(data) < requiredBytes {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
+
+	return nil, err
 }
+
+/*
+d, e := splitOutNotification(d, readEventLogReply)
+if e != nil {
+	err = errors.Wrapf(err, e.Error())
+} else {
+	dt, e := hex.DecodeString(string(d[:]))
+	if e != nil {
+		err = errors.Wrapf(err, e.Error())
+	} else {
+		e = fn(dt)
+		if e != nil {
+			err = errors.Wrapf(err, e.Error())
+		}
+	}
+}
+*/

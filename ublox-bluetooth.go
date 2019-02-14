@@ -64,22 +64,16 @@ func (ub *UbloxBluetooth) Write(data string) error {
 	return ub.serialPort.Write([]byte(append([]byte(data), tail...)))
 }
 
-/*func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData bool) ([]byte, error) {
-	d, e := ub.waitForResponse(expectedResponse, waitForData)
-	//time.Sleep(global.BluetoothCommsDelay)
-	return d, e
-}*/
-
 // WaitForResponse waits until timeout for a response from the Ublox device
 func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData bool) ([]byte, error) {
-	er := []byte(expectedResponse)
+	expected := []byte(expectedResponse)
 	d := []byte{}
 	complete := false
 	dataReceived := false
 	for {
 		select {
 		case data := <-ub.DataChannel:
-			if bytes.HasPrefix(data, er) {
+			if bytes.HasPrefix(data, expected) {
 				d = append(d, data...)
 				dataReceived = true
 				if complete {
@@ -121,18 +115,32 @@ func handleUnsolicitedMessage(data []byte) error {
 	return nil
 }
 
-type downloadhandler func([]byte) bool
+type downloadhandler func([]byte) (bool, error)
 
 // HandleDataDownload handles data notifications
 func (ub *UbloxBluetooth) HandleDataDownload(expected int, fn downloadhandler) (int, error) {
+	var err error
 	received := 0
+	loop := true
+	indicationRcvd := false
 	for {
 		select {
 		case data := <-ub.DataChannel:
-			received++
-			loop := fn(data)
-			if received == expected || !loop {
-				return received, nil
+			if received < expected {
+				received++
+				loop, err = fn(data)
+			} else {
+				// now waiting for +UUBTGI:0,13,0700
+				if bytes.HasPrefix(data, gattIndicationResponse) {
+					_, e := splitOutResponse(data, readEventLogReply)
+					if e != nil {
+						return received, err
+					}
+					indicationRcvd = true
+				}
+			}
+			if (received == expected && indicationRcvd) || !loop {
+				return received, err
 			}
 		case <-time.After(ub.timeout):
 			return received, fmt.Errorf("Timeout")
@@ -151,12 +159,12 @@ func (ub *UbloxBluetooth) Close() {
 }
 
 func (ub *UbloxBluetooth) serialportReader() {
+
 	go ub.serialPort.ScanLines(ub.readChannel)
 	for {
 		b := <-ub.readChannel
 		b = bytes.Trim(b, newline)
 		if len(b) != 0 {
-			//fmt.Printf("[serialportReader] %s\n", b)
 			switch b[0] {
 			case 'A':
 				ub.processATCommands(b)
@@ -170,7 +178,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 }
 
 func (ub *UbloxBluetooth) processATCommands(b []byte) {
-	str := strings.Trim(string(b[:]), "\r\n")
+	str := string(b[:])
 	if strings.HasPrefix(str, at) {
 		if ub.lastCommand != empty {
 			if strings.HasPrefix(str, ub.lastCommand) {
@@ -183,8 +191,7 @@ func (ub *UbloxBluetooth) processATCommands(b []byte) {
 }
 
 func (ub *UbloxBluetooth) handleGeneralMessage(b []byte) {
-	str := strings.Trim(string(b[:]), "\r\n")
-
+	str := string(b[:])
 	switch str {
 	case okMessage:
 		ub.CompletedChannel <- true

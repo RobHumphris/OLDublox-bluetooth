@@ -1,6 +1,7 @@
 package ubloxbluetooth
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -20,4 +21,10 @@ func TestATCommand(t *testing.T) {
 	if err != nil {
 		t.Errorf("AT error %v\n", err)
 	}
+
+	settings, err := ub.GetRS232Settings()
+	if err != nil {
+		t.Errorf("GetRS232Settings %v\n", err)
+	}
+	fmt.Printf("RS232 Settings: %v\n", settings)
 }

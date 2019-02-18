@@ -27,7 +27,8 @@ type UbloxBluetooth struct {
 }
 
 // DataHandler is called when the UbloxBluetooth DataChannel recieves a message
-type DataHandler func(DataResponse) error
+type Discoveryhandler func([]byte) (bool, error)
+type downloadhandler func([]byte) (bool, error)
 
 // NewUbloxBluetooth creates a new UbloxBluetooth instance
 func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, error) {
@@ -115,8 +116,6 @@ func handleUnsolicitedMessage(data []byte) error {
 	return nil
 }
 
-type downloadhandler func([]byte) (bool, error)
-
 // HandleDataDownload handles data notifications
 func (ub *UbloxBluetooth) HandleDataDownload(expected int, fn downloadhandler) (int, error) {
 	var err error
@@ -144,6 +143,30 @@ func (ub *UbloxBluetooth) HandleDataDownload(expected int, fn downloadhandler) (
 			}
 		case <-time.After(ub.timeout):
 			return received, fmt.Errorf("Timeout")
+		}
+	}
+}
+
+// HandleDiscovery is used to monitor incoming data channels for discovery
+func (ub *UbloxBluetooth) HandleDiscovery(expectedResponse string, fn Discoveryhandler) error {
+	var err error
+	expected := []byte(expectedResponse)
+	loop := true
+	for {
+		select {
+		case data := <-ub.DataChannel:
+			if bytes.HasPrefix(data, expected) {
+				loop, err = fn(data)
+			}
+			if err != nil || !loop {
+				return err
+			}
+		case _ = <-ub.CompletedChannel:
+			return err
+		case e := <-ub.ErrorChannel:
+			return e
+		case <-time.After(ub.timeout):
+			return fmt.Errorf("Timeout")
 		}
 	}
 }

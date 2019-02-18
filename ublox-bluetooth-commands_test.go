@@ -24,7 +24,7 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 	serial.SetVerbose(true)
 	for i := 0; i < 1; i++ {
 		//exerciseTheDevice("CE1A0B7E9D79r", ub, t, i, true, false)
-		//exerciseTheDevice("D5926479C652r", ub, t, i)
+		//exerciseTheDevice("D5926479C652r", ub, t, i, true, false)
 		exerciseTheDevice("C1851F6083F8r", ub, t, i, true, false)
 	}
 }

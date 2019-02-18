@@ -1,12 +1,13 @@
 package ubloxbluetooth
 
 import (
+	"fmt"
 	"testing"
 )
 
 // TestDiscovery
 func TestDiscovery(t *testing.T) {
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := NewUbloxBluetooth("/dev/ttyUSB1", timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -27,19 +28,19 @@ func TestDiscovery(t *testing.T) {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	discovered, err := ub.DiscoveryCommand()
-	if err != nil {
-		t.Errorf("TestDiscovery error %v\n", err)
-	}
-	if len(discovered) < 1 {
-		t.Errorf("No discovered devices found\n")
+	alpha := func(dr *DiscoveryReply) error {
+		fmt.Printf("Discovery: %v\n", dr)
+		return nil
 	}
 
-	discovered, err = ub.DiscoveryCommand()
+	err = ub.DiscoveryCommand(alpha)
 	if err != nil {
 		t.Errorf("TestDiscovery error %v\n", err)
 	}
-	if len(discovered) < 1 {
-		t.Errorf("No discovered devices found\n")
+
+	err = ub.DiscoveryCommand(alpha)
+	if err != nil {
+		t.Errorf("TestDiscovery error %v\n", err)
 	}
+
 }

@@ -81,13 +81,26 @@ func (ub *UbloxBluetooth) RebootUblox() error {
 	return nil
 }
 
-// DiscoveryCommand issues the Discover command and builds a list of new devices
-func (ub *UbloxBluetooth) DiscoveryCommand() ([]DiscoveryReply, error) {
-	d, err := ub.writeAndWait(DiscoveryCommand(), true)
+// DiscoveryReplyHandler handles discovery replies
+type DiscoveryReplyHandler func(*DiscoveryReply) error
+
+// DiscoveryCommand issues the Discover command and calls the DiscoveryReplyHandler
+func (ub *UbloxBluetooth) DiscoveryCommand(fn DiscoveryReplyHandler) error {
+	dc := DiscoveryCommand()
+	err := ub.Write(dc.Cmd)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return ProcessDiscoveryReply(d)
+
+	return ub.HandleDiscovery(dc.Resp, func(d []byte) (bool, error) {
+		dr, err := ProcessDiscoveryReply(d)
+		if err == nil {
+			err = fn(dr)
+		} else if err != ErrUnexpectedResponse {
+			return false, err
+		}
+		return true, nil
+	})
 }
 
 // ConnectToDevice attempts to connect to the device with the specified address.
@@ -211,7 +224,7 @@ func (ub *UbloxBluetooth) ReadConfig(cr *ConnectionReply) (*ConfigReply, error) 
 type DownloadLogHandler func([]byte) error
 
 // DownloadLogFile requests a number of log records to be downloaded.
-func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int, fn DownloadLogHandler) error { //([][]byte, error) {
+func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int, fn DownloadLogHandler) error {
 	if cr == nil {
 		return fmt.Errorf("ConnectionReply is nil")
 	}
@@ -226,7 +239,6 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 		return errr
 	}
 
-	//data := make([][]byte, expected)
 	received, errr := ub.HandleDataDownload(expected, func(d []byte) (bool, error) {
 		var err error
 		if bytes.HasPrefix(d, gattNotificationResponse) {
@@ -255,7 +267,6 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 	if received != expected {
 		errr = errors.Wrap(errr, fmt.Sprintf("expected %d received %d\n", expected, received))
 	}
-	//return data, err
 	return errr
 }
 
@@ -346,20 +357,3 @@ func (ub *UbloxBluetooth) ReadSlotData(cr *ConnectionReply, slotNumber int, offs
 
 	return nil, err
 }
-
-/*
-d, e := splitOutNotification(d, readEventLogReply)
-if e != nil {
-	err = errors.Wrapf(err, e.Error())
-} else {
-	dt, e := hex.DecodeString(string(d[:]))
-	if e != nil {
-		err = errors.Wrapf(err, e.Error())
-	} else {
-		e = fn(dt)
-		if e != nil {
-			err = errors.Wrapf(err, e.Error())
-		}
-	}
-}
-*/

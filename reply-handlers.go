@@ -290,22 +290,16 @@ func ProcessRS232SettingsReply(d []byte) (*RS232SettingsReply, error) {
 	return &rsRply, nil
 }
 
+// ErrUnexpectedResponse is a type of error that may not be catastrophic - just unexpected
+var ErrUnexpectedResponse = fmt.Errorf("UnexpectedResponse")
+
 // ProcessDiscoveryReply returns an array of DiscoveryReplys and a error
-func ProcessDiscoveryReply(d []byte) ([]DiscoveryReply, error) {
-	var err error
-	discovered := []DiscoveryReply{}
+func ProcessDiscoveryReply(d []byte) (*DiscoveryReply, error) {
 	b := bytes.Split(d, discoveryResponse)
-	for i := 0; i < len(b); i++ {
-		if len(b[i]) > 0 {
-			d, e := NewDiscoveryReply(string(b[i]))
-			if e != nil {
-				err = errors.Wrapf(err, "NewDiscoveryReply error: %v\n", e)
-			} else {
-				discovered = append(discovered, *d)
-			}
-		}
+	if len(b) < 1 {
+		return nil, ErrUnexpectedResponse
 	}
-	return discovered, err
+	return NewDiscoveryReply(string(b[1]))
 }
 
 // ProcessEventsReply returns the expected number of event notifications that we're about to receive.

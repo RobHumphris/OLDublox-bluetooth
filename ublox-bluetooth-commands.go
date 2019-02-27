@@ -21,6 +21,7 @@ var abortCommand = []byte{0x09}
 var readSlotCountCommand = []byte{0x0E}
 var readSlotInfoCommand = []byte{0x0F}
 var readSlotDataCommand = []byte{0x10}
+var creditCommand = []byte{0x11}
 
 func (ub *UbloxBluetooth) writeAndWait(r CmdResp, waitForData bool) ([]byte, error) {
 	err := ub.Write(r.Cmd)
@@ -221,7 +222,19 @@ func (ub *UbloxBluetooth) ReadConfig(cr *ConnectionReply) (*ConfigReply, error) 
 	return NewConfigReply(d)
 }
 
+func (ub *UbloxBluetooth) SendCredits(cr *ConnectionReply, credit int) error {
+	if cr == nil {
+		return fmt.Errorf("ConnectionReply is nil")
+	}
+
+	creditHex := uint8ToString(uint8(credit))
+	_, err := ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, creditCommand, creditHex), false)
+	return err
+}
+
 type DownloadLogHandler func([]byte) error
+
+const DefaultCredit = 32
 
 // DownloadLogFile requests a number of log records to be downloaded.
 func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int, fn DownloadLogHandler) error {
@@ -229,16 +242,24 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 		return fmt.Errorf("ConnectionReply is nil")
 	}
 	si := uint16ToString(uint16(startingIndex))
+
 	d, errr := ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, readEventLogCommand, si), true)
 	if errr != nil {
-		return errr
+		return errors.Wrap(errr, "readEventLogCommand error")
 	}
 
 	expected, errr := ProcessEventsReply(d)
 	if errr != nil {
-		return errr
+		return errors.Wrap(errr, "ProcessEventsReply error")
 	}
 
+	/*errr = ub.SendCredits(cr, DefaultCredit)
+	if errr != nil {
+		return errors.Wrap(errr, "SendCredits error")
+	}*/
+
+	notificationsReceived := 0
+	halfwayPoint := DefaultCredit / 2
 	received, errr := ub.HandleDataDownload(expected, func(d []byte) (bool, error) {
 		var err error
 		if bytes.HasPrefix(d, gattNotificationResponse) {
@@ -246,6 +267,7 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 			if e != nil {
 				err = errors.Wrapf(err, e.Error())
 			} else {
+				notificationsReceived++
 				dt, e := hex.DecodeString(string(d[:]))
 				if e != nil {
 					err = errors.Wrapf(err, e.Error())
@@ -255,11 +277,23 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 						err = errors.Wrapf(err, e.Error())
 					}
 				}
+				if notificationsReceived > halfwayPoint {
+					notificationsReceived = 0
+					fmt.Println("Sending credits")
+					e = ub.SendCredits(cr, halfwayPoint)
+					if e != nil {
+						err = errors.Wrapf(err, e.Error())
+					}
+				}
 			}
 		} else if bytes.HasPrefix(d, gattIndicationResponse) {
 			_, e := splitOutResponse(d, readEventLogReply)
-			err = errors.Wrapf(err, "notification error %v ", e)
-			return false, err
+			if err == nil {
+				err = e
+			} else {
+				err = errors.Wrapf(err, "notification error %v ", e)
+			}
+			//return false, e
 		}
 		return true, err
 	})

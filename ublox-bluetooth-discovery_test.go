@@ -7,7 +7,7 @@ import (
 
 // TestDiscovery
 func TestDiscovery(t *testing.T) {
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB1", timeout)
+	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -38,9 +38,21 @@ func TestDiscovery(t *testing.T) {
 		t.Errorf("TestDiscovery error %v\n", err)
 	}
 
+	cr := connectToDevice("D5926479C652r", ub, t)
+	ub.DisconnectFromDevice(cr)
+
+	err = ub.ATCommand()
+	if err != nil {
+		t.Errorf("AT error %v\n", err)
+	}
+
 	err = ub.DiscoveryCommand(alpha)
 	if err != nil {
 		t.Errorf("TestDiscovery error %v\n", err)
 	}
 
+	err = ub.ATCommand()
+	if err != nil {
+		t.Errorf("AT error %v\n", err)
+	}
 }

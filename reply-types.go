@@ -65,3 +65,18 @@ type SlotInfoReply struct {
 	BatteryVoltage int
 	VoltageIn      int
 }
+
+// ConnectedPeer describes the Bluetooth peer's connection
+type ConnectedPeer struct {
+	PeerHandle int
+	Type       int
+	Profile    int
+	MacAddress string
+	FrameSize  int
+}
+
+type ACLConnected struct {
+	ConnHandle int
+	Type       int
+	MacAddress string
+}

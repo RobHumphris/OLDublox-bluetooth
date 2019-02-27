@@ -2,74 +2,6 @@ package ubloxbluetooth
 
 import "fmt"
 
-/**
-* The commands and responses defined here are described in the u-blox
-* document found here https://www.u-blox.com/sites/default/files/u-blox-SHO_ATCommands_%28UBX-14044127%29.pdf
- */
-const empty = ""
-const newline = "\r\n"
-const at = "AT"
-const rs232Settings = "+UMRS"
-const rs232SettingsResponseString = "+UMRS:"
-
-var rs232SettingsResponse = []byte(rs232SettingsResponseString)
-
-const echoOff = "ATE0"
-const storeConfig = "AT&W"
-
-const powerOff = "+CPWROFF"
-const rebootResponseString = "+STARTUP"
-
-var rebootResponse = []byte(rebootResponseString)
-
-const discovery = "+UBTD"
-const discoveryResponseString = "+UBTD:"
-
-var discoveryResponse = []byte(discoveryResponseString)
-
-const bleRole = "+UBTLE"
-const bleDisabled = 0
-const bleCentral = 1
-const blePeripheral = 2
-const bleSimultaneous = 3
-
-const bleConfiguration = "+UBTLECFG"
-const minConnectionInterval = 4
-const maxConnectionInterval = 5
-
-const connect = "+UBTACLC"
-const connectResponse = "+UUBTACLC:"
-
-const disconnect = "+UBTACLD"
-const disconnectResponseString = "+UUBTACLD:"
-
-var disconnectResponse = []byte(disconnectResponseString)
-
-const writeCharacteristic = "+UBTGW"
-const writeCharacteristicResponseString = ""
-const writeCharacteristicConfig = "+UBTGWC"
-
-const readCharacterisitic = "+UBTGR"
-
-const errorMessage = "ERROR"
-const okMessage = "OK"
-
-const commandValueHandle = 13
-const commandCCCDHandle = 14
-const dataValueHandle = 16
-const dataCCCDHandle = 17
-
-const gattIndicationResponseString = "+UUBTGI:"
-
-var ubloxBTReponseHeader = []byte("+UUBT")
-var gattIndicationResponse = []byte(gattIndicationResponseString)
-var gattNotificationResponse = []byte("+UUBTGN:")
-var blePHYUpdateResponse = []byte("+UUBTLEPHYU:")
-
-var tail = []byte{'\r', '\n'}
-var separator = []byte(":")
-var comma = []byte{0x2C}
-
 // CmdResp holds the AT CoMmanD and the expected RESPonse
 type CmdResp struct {
 	Cmd  string
@@ -151,6 +83,7 @@ func BLEStoreConfig() CmdResp {
 	}
 }
 
+// Constructs the command to connect to a device
 func ConnectCommand(address string) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%s", connect, address),
@@ -158,6 +91,7 @@ func ConnectCommand(address string) CmdResp {
 	}
 }
 
+// Constructs the command to disconnect to a device
 func DisconnectCommand(handle int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d", disconnect, handle),
@@ -190,5 +124,40 @@ func WriteCharacteristicHexCommand(connHandle int, valueHandle int, data []byte,
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d,%d,%x%s", writeCharacteristic, connHandle, valueHandle, data, hex),
 		Resp: gattIndicationResponseString,
+	}
+}
+
+func ConnectPeerCommand(url string) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT%s=%s", connectPeer, url),
+		Resp: connectPeerResponseString,
+	}
+}
+
+func DisconnectPeerCommand(peerHandle int) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT%s=%d", disconnectPeer, peerHandle),
+		Resp: disconnectPeerResponseString,
+	}
+}
+
+func EnterDataModeCommand() CmdResp {
+	return CmdResp{
+		Cmd:  enterDataMode,
+		Resp: empty,
+	}
+}
+
+func EnterExtendedDataModeCommand() CmdResp {
+	return CmdResp{
+		Cmd:  enterExtendedDataMode,
+		Resp: empty,
+	}
+}
+
+func IssueEscapeSequence() CmdResp {
+	return CmdResp{
+		Cmd:  escapeSequence,
+		Resp: empty,
 	}
 }

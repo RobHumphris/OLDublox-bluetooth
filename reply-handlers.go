@@ -86,6 +86,12 @@ func stringToFloat32(s string) float32 {
 	return math.Float32frombits(intVal)
 }
 
+func uint8ToString(i uint8) string {
+	b := make([]byte, 1)
+	b[0] = i
+	return hex.EncodeToString(b)
+}
+
 func uint16ToString(i uint16) string {
 	b := make([]byte, 2)
 	binary.LittleEndian.PutUint16(b, i)
@@ -121,6 +127,105 @@ func NewDiscoveryReply(d string) (*DiscoveryReply, error) {
 		DeviceName:       t[2],
 		DataType:         dataType,
 		Data:             t[4],
+	}, nil
+}
+
+// ProcessConnectDeviceSPSReply takes the passed string and attempts to parse it for its peerHandle
+func ProcessConnectDeviceSPSReply(d string) (int, error) {
+	b := strings.Split(d, connectPeerResponseString)
+	if len(b) < 2 {
+		return -1, fmt.Errorf("[ProcessConnectDeviceSPSReply] could not parse response (%s)", d)
+	}
+
+	handle, err := strconv.Atoi(b[1])
+	if err != nil {
+		return -1, errors.Wrapf(err, "[ProcessConnectDeviceSPSReply] error extracting Handle value (%s)", d)
+	}
+	return handle, nil
+}
+
+// ProcessPeerDisconnectedReply takes the passed string, pulls out the handle and checks that it matches the peerHandle
+func ProcessPeerDisconnectedReply(peerHandle int, d string) error {
+	b := strings.Split(d, disconnectPeerResponseString)
+	if len(b) < 2 {
+		return fmt.Errorf("[ProcessPeerDisconnectedReply] could not parse response (%s)", d)
+	}
+
+	handle, err := strconv.Atoi(b[1])
+	if err != nil {
+		return errors.Wrapf(err, "[ProcessPeerDisconnectedReply] error extracting Handle value (%s)", d)
+	}
+
+	if handle != peerHandle {
+		return fmt.Errorf("[ProcessPeerDisconnectedReply] returned handle does not match required (wanted: %d got %d)", peerHandle, handle)
+	}
+	return nil
+}
+
+// NewConnectedPeerReply parses the passed string to assemble a new ConnectedPeer instance
+func NewConnectedPeerReply(d string) (*ConnectedPeer, error) {
+	b := strings.Split(d, peerConnectedResponseString)
+	if len(b) < 2 {
+		return nil, fmt.Errorf("[NewConnectedPeerReply] could not connect to device (%v)", b)
+	}
+	t := strings.Split(b[1], ",")
+	if len(t) < 4 {
+		return nil, fmt.Errorf("[NewConnectedPeerReply] could not connect to device (%v)", b)
+	}
+
+	handle, err := strconv.Atoi(t[0])
+	if err != nil {
+		return nil, errors.Wrapf(err, "[NewConnectedPeerReply] error extracting Handle value (%v)", b)
+	}
+
+	typ, err := strconv.Atoi(t[1])
+	if err != nil {
+		return nil, errors.Wrapf(err, "[NewConnectedPeerReply] error extracting Type value (%v)", b)
+	}
+
+	profile, err := strconv.Atoi(t[2])
+	if err != nil {
+		return nil, errors.Wrapf(err, "[NewConnectedPeerReply] error extracting Profile value (%v)", b)
+	}
+
+	frameSize, err := strconv.Atoi(t[4])
+	if err != nil {
+		return nil, errors.Wrapf(err, "[NewConnectedPeerReply] error extracting FrameSize value (%v)", b)
+	}
+
+	return &ConnectedPeer{
+		PeerHandle: handle,
+		Type:       typ,
+		Profile:    profile,
+		MacAddress: t[3],
+		FrameSize:  frameSize,
+	}, nil
+}
+
+// NewACLConnectedReply parses the string for elements to extract and create a new ACLConnected instance
+func NewACLConnectedReply(d string) (*ACLConnected, error) {
+	b := strings.Split(d, aclConnectionRemoteDeviceResponseString)
+	if len(b) < 2 {
+		return nil, fmt.Errorf("[NewACLConnectedReply] could not connect to device (%v)", b)
+	}
+	t := strings.Split(b[1], ",")
+	if len(t) < 3 {
+		return nil, fmt.Errorf("[NewACLConnectedReply] could not connect to device (%v)", b)
+	}
+
+	connHandle, err := strconv.Atoi(t[0])
+	if err != nil {
+		return nil, errors.Wrapf(err, "[NewACLConnectedReply] error extracting ConnHandle value (%v)", b)
+	}
+
+	typ, err := strconv.Atoi(t[1])
+	if err != nil {
+		return nil, errors.Wrapf(err, "[NewConnectionReply] error extracting Type value (%v)", b)
+	}
+	return &ACLConnected{
+		ConnHandle: connHandle,
+		Type:       typ,
+		MacAddress: t[2],
 	}, nil
 }
 

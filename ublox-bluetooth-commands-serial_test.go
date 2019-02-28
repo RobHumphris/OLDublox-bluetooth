@@ -26,7 +26,6 @@ func setupForSerialTests(t *testing.T, echoOff bool) (*UbloxBluetooth, error) {
 		}
 	}
 
-	//serial.SetVerbose()
 	return ub, err
 }
 
@@ -70,8 +69,12 @@ func TestExtendedDataMode(t *testing.T) {
 	}
 	time.Sleep(100 * time.Millisecond)
 
-	serial.SetVerbose(true)
-	exerciseTheDevice("C1851F6083F8r", ub, t, 1, false, true)
+	for i := 0; i < 1000; i++ {
+		//exerciseTheDevice("CE1A0B7E9D79r", ub, t, i, true, false)
+		exerciseTheDevice("D5926479C652r", ub, t, i, false, false)
+		//time.Sleep(100 * time.Millisecond)
+	}
+
 	time.Sleep(100 * time.Millisecond)
 }
 

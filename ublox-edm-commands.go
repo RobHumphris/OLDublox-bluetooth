@@ -61,7 +61,7 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 		ub.StartEventReceived = true
 	case ATConfirmation:
 		data := bytes.Trim(msg[2:len(msg)-1], newline)
-		fmt.Printf("ATConfirmation: %s\n", data)
+		//fmt.Printf("ATConfirmation: %s\n", data)
 		ub.handleGeneralMessage(data)
 	case ATEvent:
 		data := bytes.Trim(msg[2:len(msg)-1], newline)

@@ -93,7 +93,7 @@ func TestPagedDownloads(t *testing.T) {
 	serial.SetVerbose(true)
 	startingIndex := info.CurrentSequenceNumber - info.RecordsCount
 	err = ub.DownloadLogFile(cr, startingIndex, func(b []byte) error {
-		fmt.Print(".")
+		//fmt.Print(".")
 		return nil
 	})
 	if err != nil {
@@ -186,6 +186,13 @@ func connectToDevice(mac string, ub *UbloxBluetooth, t *testing.T) *ConnectionRe
 		t.Fatalf("TestConnect error %v\n", err)
 	}
 
+	fmt.Printf("[ConnectionReply] %v\n", cr)
+
+	err = ub.EnableNotifications(cr)
+	if err != nil {
+		t.Fatalf("EnableNotifications error %v\n", err)
+	}
+
 	err = ub.EnableIndications(cr)
 	if err != nil {
 		t.Fatalf("EnableIndications error %v\n", err)
@@ -226,7 +233,7 @@ func exerciseTheDevice(deviceAddr string, ub *UbloxBluetooth, t *testing.T, itte
 		startingIndex := info.CurrentSequenceNumber - info.RecordsCount
 		fmt.Printf("[DownloadLogFile] starting run: %d\n", itteration)
 		err = ub.DownloadLogFile(cr, startingIndex, func(b []byte) error {
-			fmt.Print(".")
+			//fmt.Print(".")
 			return nil
 		})
 		if err != nil {

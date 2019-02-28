@@ -33,6 +33,7 @@ type UbloxBluetooth struct {
 	EDMChannel         chan []byte
 	ErrorChannel       chan error
 	CompletedChannel   chan bool
+	connectedDevice    *ConnectionReply
 }
 
 // DataHandler is called when the UbloxBluetooth DataChannel recieves a message
@@ -64,6 +65,7 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 		EDMChannel:         make(chan []byte),
 		ErrorChannel:       make(chan error),
 		CompletedChannel:   make(chan bool),
+		connectedDevice:    nil,
 	}
 
 	go ub.serialportReader()

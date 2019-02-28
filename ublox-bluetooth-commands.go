@@ -110,7 +110,13 @@ func (ub *UbloxBluetooth) ConnectToDevice(addr string) (*ConnectionReply, error)
 	if err != nil {
 		return nil, err
 	}
-	return NewConnectionReply(string(d))
+
+	cr, err := NewConnectionReply(string(d))
+	if err != nil {
+		return nil, err
+	}
+	ub.connectedDevice = cr
+	return cr, nil
 }
 
 // DisconnectFromDevice issues the disconnect command using the handle from the ConnectionReply
@@ -234,7 +240,9 @@ func (ub *UbloxBluetooth) SendCredits(cr *ConnectionReply, credit int) error {
 
 type DownloadLogHandler func([]byte) error
 
-const DefaultCredit = 32
+const DefaultCredit = 16
+
+var halfwayPoint = DefaultCredit / 2
 
 // DownloadLogFile requests a number of log records to be downloaded.
 func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int, fn DownloadLogHandler) error {
@@ -253,13 +261,13 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 		return errors.Wrap(errr, "ProcessEventsReply error")
 	}
 
-	/*errr = ub.SendCredits(cr, DefaultCredit)
+	errr = ub.SendCredits(cr, DefaultCredit)
 	if errr != nil {
 		return errors.Wrap(errr, "SendCredits error")
-	}*/
+	}
 
 	notificationsReceived := 0
-	halfwayPoint := DefaultCredit / 2
+
 	received, errr := ub.HandleDataDownload(expected, func(d []byte) (bool, error) {
 		var err error
 		if bytes.HasPrefix(d, gattNotificationResponse) {
@@ -277,9 +285,8 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 						err = errors.Wrapf(err, e.Error())
 					}
 				}
-				if notificationsReceived > halfwayPoint {
-					notificationsReceived = 0
-					fmt.Println("Sending credits")
+				if notificationsReceived%halfwayPoint == 0 {
+					//fmt.Printf("CR")
 					e = ub.SendCredits(cr, halfwayPoint)
 					if e != nil {
 						err = errors.Wrapf(err, e.Error())
@@ -293,7 +300,7 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 			} else {
 				err = errors.Wrapf(err, "notification error %v ", e)
 			}
-			//return false, e
+			return false, e
 		}
 		return true, err
 	})

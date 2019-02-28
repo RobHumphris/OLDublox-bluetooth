@@ -39,51 +39,51 @@ func accessDevice(ub *UbloxBluetooth, mac string) error {
 }
 
 func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
-	cr, err := ub.ConnectToDevice(deviceAddr)
-	fmt.Printf("[ConnectToDevice] replied with: %v\n", cr)
-	if err != nil {
-		return err
-	}
-	defer ub.DisconnectFromDevice(cr)
+	return ub.ConnectToDevice(deviceAddr, func(cr *ConnectionReply) error {
+		fmt.Printf("[ConnectToDevice] replied with: %v\n", cr)
+		defer ub.DisconnectFromDevice(cr)
 
-	err = ub.EnableIndications(cr)
-	if err != nil {
-		return err
-	}
+		err := ub.EnableIndications(cr)
+		if err != nil {
+			return err
+		}
 
-	err = ub.EnableNotifications(cr)
-	if err != nil {
-		return err
-	}
+		err = ub.EnableNotifications(cr)
+		if err != nil {
+			return err
+		}
 
-	unlocked, err := ub.UnlockDevice(cr, password)
-	if err != nil {
-		return err
-	}
-	if !unlocked {
-		return err
-	}
-	fmt.Printf("[UnlockDevice] replied with: %v\n", unlocked)
+		unlocked, err := ub.UnlockDevice(cr, password)
+		if err != nil {
+			return err
+		}
+		if !unlocked {
+			return err
+		}
+		fmt.Printf("[UnlockDevice] replied with: %v\n", unlocked)
 
-	version, err := ub.GetVersion(cr)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Software Version: %d Hardware Version: %d", version.SoftwareVersion, version.HardwareVersion)
+		version, err := ub.GetVersion(cr)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Software Version: %d Hardware Version: %d", version.SoftwareVersion, version.HardwareVersion)
 
-	info, err := ub.GetInfo(cr)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("[GetInfo] replied with: %v\n", info)
+		info, err := ub.GetInfo(cr)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("[GetInfo] replied with: %v\n", info)
 
-	config, err := ub.ReadConfig(cr)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("[ReadConfig] replied with: %v\n", config)
+		config, err := ub.ReadConfig(cr)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("[ReadConfig] replied with: %v\n", config)
 
-	return nil
+		return nil
+	}, func(cr *ConnectionReply) error {
+		return fmt.Errorf("Disconnected!")
+	})
 }
 
 func TestSingleAccess(t *testing.T) {

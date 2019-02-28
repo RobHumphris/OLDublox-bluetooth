@@ -15,6 +15,22 @@ type DataResponse struct {
 	data  []byte
 }
 
+// DataHandler is called when the UbloxBluetooth DataChannel recieves a message
+type Discoveryhandler func([]byte) (bool, error)
+type downloadhandler func([]byte) (bool, error)
+
+// DataMessageHandler functions are invoked when data is recieved.
+type DataMessageHandler func([]byte) (bool, error)
+
+// DeviceEvent functions are called and defined in various events e.g. Connect, Disconnect
+type DeviceEvent func(*ConnectionReply) error
+
+// DiscoveryReplyHandler handles discovery replies
+type DiscoveryReplyHandler func(*DiscoveryReply) error
+
+// DownloadLogHandler functions are invoked with
+type DownloadLogHandler func([]byte) error
+
 type ubloxMode int
 
 const commandMode ubloxMode = 0
@@ -34,12 +50,9 @@ type UbloxBluetooth struct {
 	ErrorChannel       chan error
 	CompletedChannel   chan bool
 	connectedDevice    *ConnectionReply
+	disconnectHandler  DeviceEvent
+	disconnectExpected bool
 }
-
-// DataHandler is called when the UbloxBluetooth DataChannel recieves a message
-type Discoveryhandler func([]byte) (bool, error)
-type downloadhandler func([]byte) (bool, error)
-type DataMessageHandler func([]byte) (bool, error)
 
 // NewUbloxBluetooth creates a new UbloxBluetooth instance
 func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, error) {

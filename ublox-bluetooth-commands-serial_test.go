@@ -52,32 +52,6 @@ func TestDataMode(t *testing.T) {
 	}
 }
 
-func TestExtendedDataMode(t *testing.T) {
-	ub, err := setupForSerialTests(t, true)
-	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v\n", err)
-	}
-
-	err = ub.EnterExtendedDataMode()
-	if err != nil {
-		t.Fatalf("EnterDataMode error %v\n", err)
-	}
-
-	err = ub.ATCommand()
-	if err != nil {
-		t.Fatalf("AT Command 1 error %v\n", err)
-	}
-	time.Sleep(100 * time.Millisecond)
-
-	for i := 0; i < 1000; i++ {
-		//exerciseTheDevice("CE1A0B7E9D79r", ub, t, i, true, false)
-		exerciseTheDevice("D5926479C652r", ub, t, i, false, false)
-		//time.Sleep(100 * time.Millisecond)
-	}
-
-	time.Sleep(100 * time.Millisecond)
-}
-
 func TestSerialPortService(t *testing.T) {
 	loopCount := 0
 	ub, err := setupForSerialTests(t, true)

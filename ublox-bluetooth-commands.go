@@ -82,9 +82,6 @@ func (ub *UbloxBluetooth) RebootUblox() error {
 	return nil
 }
 
-// DiscoveryReplyHandler handles discovery replies
-type DiscoveryReplyHandler func(*DiscoveryReply) error
-
 // DiscoveryCommand issues the Discover command and calls the DiscoveryReplyHandler
 func (ub *UbloxBluetooth) DiscoveryCommand(fn DiscoveryReplyHandler) error {
 	dc := DiscoveryCommand()
@@ -105,18 +102,21 @@ func (ub *UbloxBluetooth) DiscoveryCommand(fn DiscoveryReplyHandler) error {
 }
 
 // ConnectToDevice attempts to connect to the device with the specified address.
-func (ub *UbloxBluetooth) ConnectToDevice(addr string) (*ConnectionReply, error) {
+func (ub *UbloxBluetooth) ConnectToDevice(addr string, onConnect DeviceEvent, onDisconnect DeviceEvent) error {
 	d, err := ub.writeAndWait(ConnectCommand(addr), true)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	cr, err := NewConnectionReply(string(d))
 	if err != nil {
-		return nil, err
+		return err
 	}
+
 	ub.connectedDevice = cr
-	return cr, nil
+	ub.disconnectHandler = onDisconnect
+	ub.disconnectExpected = false
+	return onConnect(cr)
 }
 
 // DisconnectFromDevice issues the disconnect command using the handle from the ConnectionReply
@@ -124,6 +124,8 @@ func (ub *UbloxBluetooth) DisconnectFromDevice(cr *ConnectionReply) error {
 	if cr == nil {
 		return fmt.Errorf("ConnectionReply is nil")
 	}
+
+	ub.disconnectExpected = true
 
 	d, err := ub.writeAndWait(DisconnectCommand(cr.Handle), true)
 	if err != nil {
@@ -134,6 +136,9 @@ func (ub *UbloxBluetooth) DisconnectFromDevice(cr *ConnectionReply) error {
 	if !ok {
 		return fmt.Errorf("Incorrect disconnect reply %q", d)
 	}
+	ub.connectedDevice = nil
+	ub.disconnectHandler = nil
+	ub.disconnectExpected = false
 	return err
 }
 
@@ -228,6 +233,12 @@ func (ub *UbloxBluetooth) ReadConfig(cr *ConnectionReply) (*ConfigReply, error) 
 	return NewConfigReply(d)
 }
 
+// DefaultCredit says that we can handle 16 messages in our FIFO
+const DefaultCredit = 16
+
+var halfwayPoint = DefaultCredit / 2
+
+// SendCredits messages the connected device to say that it can accept `credit` number of messages
 func (ub *UbloxBluetooth) SendCredits(cr *ConnectionReply, credit int) error {
 	if cr == nil {
 		return fmt.Errorf("ConnectionReply is nil")
@@ -237,12 +248,6 @@ func (ub *UbloxBluetooth) SendCredits(cr *ConnectionReply, credit int) error {
 	_, err := ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, creditCommand, creditHex), false)
 	return err
 }
-
-type DownloadLogHandler func([]byte) error
-
-const DefaultCredit = 16
-
-var halfwayPoint = DefaultCredit / 2
 
 // DownloadLogFile requests a number of log records to be downloaded.
 func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int, fn DownloadLogHandler) error {

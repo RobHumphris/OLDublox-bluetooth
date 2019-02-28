@@ -38,21 +38,24 @@ func TestDiscovery(t *testing.T) {
 		t.Errorf("TestDiscovery error %v\n", err)
 	}
 
-	cr := connectToDevice("D5926479C652r", ub, t)
-	ub.DisconnectFromDevice(cr)
+	err = connectToDevice("D5926479C652r", func(cr *ConnectionReply, t *testing.T) error {
+		ub.DisconnectFromDevice(cr)
 
-	err = ub.ATCommand()
-	if err != nil {
-		t.Errorf("AT error %v\n", err)
-	}
+		err = ub.ATCommand()
+		if err != nil {
+			t.Errorf("AT error %v\n", err)
+		}
 
-	err = ub.DiscoveryCommand(alpha)
-	if err != nil {
-		t.Errorf("TestDiscovery error %v\n", err)
-	}
+		err = ub.DiscoveryCommand(alpha)
+		if err != nil {
+			t.Errorf("TestDiscovery error %v\n", err)
+		}
 
-	err = ub.ATCommand()
-	if err != nil {
-		t.Errorf("AT error %v\n", err)
-	}
+		err = ub.ATCommand()
+		if err != nil {
+			t.Errorf("AT error %v\n", err)
+		}
+		return err
+	}, ub, t)
+
 }

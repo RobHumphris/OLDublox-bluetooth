@@ -69,31 +69,35 @@ func TestMultipleConnects(t *testing.T) {
 
 func doConnect(ub *UbloxBluetooth, mac string, count int) error {
 	fmt.Print("C")
-	cr, err := ub.ConnectToDevice(mac)
+	err := ub.ConnectToDevice(mac, func(cr *ConnectionReply) error {
+		defer ub.DisconnectFromDevice(cr)
+
+		time.Sleep(global.BluetoothPostConnectDelay)
+
+		fmt.Print("N")
+		err := ub.EnableNotifications(cr)
+		if err != nil {
+			return errors.Wrapf(err, "EnableNotifications mac: %s count: %d\n", mac, count)
+		}
+
+		fmt.Print("I")
+		err = ub.EnableIndications(cr)
+		if err != nil {
+			return errors.Wrapf(err, "EnableIndications mac: %s count: %d\n", mac, count)
+		}
+
+		fmt.Print("U")
+		_, err = ub.UnlockDevice(cr, password)
+		if err != nil {
+			return errors.Wrapf(err, "UnlockDevice mac: %s count: %d\n", mac, count)
+		}
+		fmt.Print("D\n")
+		return nil
+	}, func(cr *ConnectionReply) error {
+		return fmt.Errorf("Disconnected")
+	})
 	if err != nil {
 		return errors.Wrapf(err, "TestConnect mac: %s count: %d\n", mac, count)
 	}
-	defer ub.DisconnectFromDevice(cr)
-
-	time.Sleep(global.BluetoothPostConnectDelay)
-
-	fmt.Print("N")
-	err = ub.EnableNotifications(cr)
-	if err != nil {
-		return errors.Wrapf(err, "EnableNotifications mac: %s count: %d\n", mac, count)
-	}
-
-	fmt.Print("I")
-	err = ub.EnableIndications(cr)
-	if err != nil {
-		return errors.Wrapf(err, "EnableIndications mac: %s count: %d\n", mac, count)
-	}
-
-	fmt.Print("U")
-	_, err = ub.UnlockDevice(cr, password)
-	if err != nil {
-		return errors.Wrapf(err, "UnlockDevice mac: %s count: %d\n", mac, count)
-	}
-	fmt.Print("D\n")
-	return nil
+	return err
 }

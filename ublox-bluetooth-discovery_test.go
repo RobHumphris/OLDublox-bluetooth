@@ -13,7 +13,12 @@ func TestDiscovery(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = ub.ConfigureUblox()
+	err = ub.EnterExtendedDataMode()
+	if err != nil {
+		t.Fatalf("EnterDataMode error %v\n", err)
+	}
+
+	/*err = ub.ConfigureUblox()
 	if err != nil {
 		t.Fatalf("ConfigureUblox error %v\n", err)
 	}
@@ -21,7 +26,7 @@ func TestDiscovery(t *testing.T) {
 	err = ub.RebootUblox()
 	if err != nil {
 		t.Fatalf("RebootUblox error %v\n", err)
-	}
+	}*/
 
 	err = ub.ATCommand()
 	if err != nil {
@@ -38,7 +43,7 @@ func TestDiscovery(t *testing.T) {
 		t.Errorf("TestDiscovery error %v\n", err)
 	}
 
-	err = connectToDevice("D5926479C652r", func(cr *ConnectionReply, t *testing.T) error {
+	/*err = connectToDevice("D5926479C652r", func(cr *ConnectionReply, t *testing.T) error {
 		ub.DisconnectFromDevice(cr)
 
 		err = ub.ATCommand()
@@ -56,6 +61,6 @@ func TestDiscovery(t *testing.T) {
 			t.Errorf("AT error %v\n", err)
 		}
 		return err
-	}, ub, t)
+	}, ub, t)*/
 
 }

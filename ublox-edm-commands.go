@@ -52,6 +52,10 @@ const StartEvent = byte(0x71)
 
 var byebye = []byte("+UUBTACLD")
 
+func removeNewlines(data []byte) []byte {
+	return bytes.ReplaceAll(data, []byte(newline), []byte(""))
+}
+
 // ParseEDMMessage parses the message array and extracts the correct message
 func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 	if msg[0] != 0x00 {
@@ -62,11 +66,15 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 	case StartEvent:
 		ub.StartEventReceived = true
 	case ATConfirmation:
-		data := bytes.Trim(msg[2:len(msg)-1], newline)
-		ub.handleGeneralMessage(data)
+		data := removeNewlines(msg[2 : len(msg)-1])
+		switch data[0] {
+		case '+':
+			ub.DataChannel <- data
+		default:
+			ub.handleGeneralMessage(data)
+		}
 	case ATEvent:
-		data := bytes.Trim(msg[2:len(msg)-1], newline)
-		fmt.Printf("ATEvent: %s\n", data)
+		data := removeNewlines(msg[2 : len(msg)-1])
 		// we check for disconnect events disconnectResponse
 		if bytes.HasPrefix(data, disconnectResponse) {
 			if ub.disconnectHandler != nil {

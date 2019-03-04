@@ -14,7 +14,7 @@ import (
 )
 
 var verbose = false
-var newline = []byte{'\r', '\n'}
+var newlineBytes = []byte{'\r', '\n'}
 
 // SetVerbose sets the logging level
 func SetVerbose(v bool) {
@@ -163,7 +163,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 		} else {
 			line = append(line, buf[0])
 			lineLen = len(line)
-			if bytes.HasSuffix(line, newline) {
+			if bytes.HasSuffix(line, newlineBytes) {
 				if lineLen > 2 {
 					dataChan <- line
 				}

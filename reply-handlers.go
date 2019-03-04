@@ -300,6 +300,11 @@ func NewConfigReply(d []byte) (*ConfigReply, error) {
 	}, nil
 }
 
+func (cr *ConfigReply) ByteArray() (string, error) {
+	a := ""
+	return a, nil
+}
+
 // NewSlotCountReply returns a SlotCountReply
 func NewSlotCountReply(d []byte) (*SlotCountReply, error) {
 	t, err := splitOutResponse(d, readSlotCountReply)

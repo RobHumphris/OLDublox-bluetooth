@@ -233,6 +233,49 @@ func (ub *UbloxBluetooth) ReadConfig(cr *ConnectionReply) (*ConfigReply, error) 
 	return NewConfigReply(d)
 }
 
+// WriteConfig sends the passed config to the device
+func (ub *UbloxBluetooth) WriteConfig(cfg *ConfigReply, cr *ConnectionReply) error {
+	if cr == nil {
+		return fmt.Errorf("ConnectionReply is nil")
+	}
+
+	configData, err := cfg.ByteArray()
+	if err != nil {
+		return err
+	}
+
+	_, err = ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, writeConfigCommand, configData), true)
+	return fmt.Errorf("NOT IMPLEMENTED")
+}
+
+// ReadName messages the remote device to get its set name
+func (ub *UbloxBluetooth) ReadName(cr *ConnectionReply) (string, error) {
+	name := ""
+	if cr == nil {
+		return name, fmt.Errorf("ConnectionReply is nil")
+	}
+
+	d, err := ub.writeAndWait(WriteCharacteristicCommand(cr.Handle, commandValueHandle, readNameCommand), true)
+	if err != nil {
+		return name, errors.Wrapf(err, "readNameCommand error")
+	}
+
+	name = string(d)
+
+	return name, nil
+}
+
+func (ub *UbloxBluetooth) WriteName(name string, cr *ConnectionReply) error {
+	if cr == nil {
+		return fmt.Errorf("ConnectionReply is nil")
+	}
+	_, err := ub.writeAndWait(WriteCharacteristicHexCommand(cr.Handle, commandValueHandle, writeNameCommand, name), true)
+	if err != nil {
+		return errors.Wrapf(err, "writeNameCommand error")
+	}
+	return nil
+}
+
 // DefaultCredit says that we can handle 16 messages in our FIFO
 const DefaultCredit = 16
 

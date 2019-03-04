@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/RobHumphris/rf-gateway/global"
+	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
 func errorHandler(ub *UbloxBluetooth, t *testing.T) {
@@ -87,13 +88,19 @@ func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
 }
 
 func TestSingleAccess(t *testing.T) {
+	serial.SetVerbose(true)
 	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
 	defer ub.Close()
 
-	err = ub.ConfigureUblox()
+	err = ub.EnterExtendedDataMode()
+	if err != nil {
+		t.Fatalf("EnterDataMode error %v\n", err)
+	}
+
+	/*err = ub.ConfigureUblox()
 	if err != nil {
 		t.Fatalf("ConfigureUblox error %v\n", err)
 	}
@@ -101,14 +108,14 @@ func TestSingleAccess(t *testing.T) {
 	err = ub.RebootUblox()
 	if err != nil {
 		t.Fatalf("RebootUblox error %v\n", err)
-	}
+	}*/
 
 	err = ub.ATCommand()
 	if err != nil {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	accessDevice(ub, "C1851F6083F8r")
+	accessDevice(ub, "D5926479C652r")
 }
 
 func TestMulipleAccesses(t *testing.T) {
@@ -118,7 +125,12 @@ func TestMulipleAccesses(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = ub.ConfigureUblox()
+	err = ub.EnterExtendedDataMode()
+	if err != nil {
+		t.Fatalf("EnterDataMode error %v\n", err)
+	}
+
+	/*err = ub.ConfigureUblox()
 	if err != nil {
 		t.Fatalf("ConfigureUblox error %v\n", err)
 	}
@@ -126,7 +138,7 @@ func TestMulipleAccesses(t *testing.T) {
 	err = ub.RebootUblox()
 	if err != nil {
 		t.Fatalf("RebootUblox error %v\n", err)
-	}
+	}*/
 
 	err = ub.ATCommand()
 	if err != nil {

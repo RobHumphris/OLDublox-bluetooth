@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -130,8 +131,13 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 	buf := make([]byte, 1)
 	for {
 		_, err := sp.file.Read(buf)
+
 		if err != nil {
-			errChan <- errors.Wrap(err, "serial read error")
+			if err == io.EOF { // ignore EOFs we're going to get them all the time.
+				continue
+			} else {
+				errChan <- errors.Wrap(err, "serial read error")
+			}
 		}
 
 		if sp.extendedDataMode {
@@ -148,6 +154,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 					expectedLength = int(binary.BigEndian.Uint16(line[1:3])) + EDMPayloadOverhead
 				} else if lineLen == expectedLength {
 					if line[expectedLength-1] == EDMStopByte {
+						showMsg("EDM R: %s\n[%x]", buf, buf)
 						edmChan <- line[EDMHeaderSize:expectedLength]
 						line = []byte{}
 						expectedLength = -1
@@ -165,6 +172,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 			lineLen = len(line)
 			if bytes.HasSuffix(line, newlineBytes) {
 				if lineLen > 2 {
+					showMsg("R: %s\n[%x]", buf, buf)
 					dataChan <- line
 				}
 				line = []byte{}

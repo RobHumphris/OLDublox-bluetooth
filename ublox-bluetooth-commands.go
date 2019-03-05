@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -35,6 +36,20 @@ func (ub *UbloxBluetooth) writeAndWait(r CmdResp, waitForData bool) ([]byte, err
 func (ub *UbloxBluetooth) ATCommand() error {
 	_, err := ub.writeAndWait(ATCommand(), false)
 	return err
+}
+
+// MultipleATCommands sends upto 5 AT commands - used to ensure stable connection.
+func (ub *UbloxBluetooth) MultipleATCommands() error {
+	var e error
+	for i := 0; i < 5; i++ {
+		time.Sleep(50 * time.Millisecond)
+		err := ub.ATCommand()
+		if err == nil {
+			return nil
+		}
+		e = errors.Wrapf(e, "AT Command error %v", err)
+	}
+	return e
 }
 
 // EchoOff requests that the ublox device is a little less noisy
@@ -75,11 +90,15 @@ func (ub *UbloxBluetooth) ConfigureUblox() error {
 
 // RebootUblox reboots the Ublox chip
 func (ub *UbloxBluetooth) RebootUblox() error {
-	_, err := ub.writeAndWait(RebootCommand(), true)
+	r := RebootCommand()
+	err := ub.Write(r.Cmd)
 	if err != nil {
 		return err
 	}
-	return nil
+	ub.currentMode = dataMode
+	_, err = ub.WaitForResponse(r.Resp, false)
+	modeSwitchDelay()
+	return err
 }
 
 // DiscoveryCommand issues the Discover command and calls the DiscoveryReplyHandler
@@ -334,7 +353,6 @@ func (ub *UbloxBluetooth) DownloadLogFile(cr *ConnectionReply, startingIndex int
 					}
 				}
 				if notificationsReceived%halfwayPoint == 0 {
-					//fmt.Printf("CR")
 					e = ub.SendCredits(cr, halfwayPoint)
 					if e != nil {
 						err = errors.Wrapf(err, e.Error())

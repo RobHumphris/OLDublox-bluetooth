@@ -144,6 +144,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 			if !edmStartReceived {
 				if buf[0] == EDMStartByte {
 					edmStartReceived = true
+					//line = append(line, buf[0])
 				}
 			}
 			if edmStartReceived {

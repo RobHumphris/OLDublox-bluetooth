@@ -12,3 +12,5 @@
 *.out
 
 ublox-bluetooth
+executables/discover/discover
+executables/configure/configure

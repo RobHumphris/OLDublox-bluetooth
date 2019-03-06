@@ -1,6 +1,7 @@
 package ubloxbluetooth
 
 import (
+	"fmt"
 	"testing"
 
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
@@ -30,11 +31,11 @@ func TestATCommand(t *testing.T) {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	/*settings, err := ub.GetRS232Settings()
+	settings, err := ub.GetRS232Settings()
 	if err != nil {
 		t.Errorf("GetRS232Settings %v\n", err)
 	}
-	fmt.Printf("RS232 Settings: %v\n", settings)*/
+	fmt.Printf("RS232 Settings: %v\n", settings)
 
 	err = ub.RebootUblox()
 	if err != nil {

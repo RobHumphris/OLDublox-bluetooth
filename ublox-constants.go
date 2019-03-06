@@ -17,6 +17,9 @@ const storeConfig = "AT&W"
 
 const powerOff = "+CPWROFF"
 const rebootResponseString = "+STARTUP"
+const factoryReset = "+UFACTORY"
+const moduleStartMode = "+UMSM"
+const moduleStartModeResponseString = "+UMSM:"
 
 var rebootResponse = []byte(rebootResponseString)
 

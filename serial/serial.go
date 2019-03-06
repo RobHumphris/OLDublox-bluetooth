@@ -173,7 +173,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 			lineLen = len(line)
 			if bytes.HasSuffix(line, newlineBytes) {
 				if lineLen > 2 {
-					showMsg("R: %s\n[%x]", buf, buf)
+					showMsg("R: \"%s\"\n[%x]", buf, buf)
 					dataChan <- line
 				}
 				line = []byte{}

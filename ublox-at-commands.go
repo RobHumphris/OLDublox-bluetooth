@@ -37,6 +37,22 @@ func RS232SettingsCommand(cmd string) CmdResp {
 	}
 }
 
+// FactoryResetCommand sets the ublox device to its Factory settings
+func FactoryResetCommand() CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT%s", factoryReset),
+		Resp: empty,
+	}
+}
+
+// ModuleStartCommand sets the ublox device's Start mode
+func ModuleStartCommand(mode StartMode) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT%s=%d", moduleStartMode, mode),
+		Resp: moduleStartModeResponseString,
+	}
+}
+
 // RebootCommand - demands a reboot
 func RebootCommand() CmdResp {
 	return CmdResp{

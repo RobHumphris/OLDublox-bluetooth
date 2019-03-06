@@ -86,6 +86,11 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 	return ub, err
 }
 
+// SetCommsRate sets the rate to either: Default BaudRate, or HighSpeed
+func (ub *UbloxBluetooth) SetCommsRate(rate serial.BaudRate) error {
+	return ub.serialPort.SetBaudRate(rate, ub.timeout)
+}
+
 // Write writes the data string to Ublox via the SerialPort
 func (ub *UbloxBluetooth) Write(data string) error {
 	var b []byte

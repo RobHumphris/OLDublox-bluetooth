@@ -48,7 +48,7 @@ func (ub *UbloxBluetooth) RebootUblox() error {
 	if err != nil {
 		return err
 	}
-	ub.currentMode = dataMode
+	//ub.currentMode = dataMode
 	_, err = ub.WaitForResponse(r.Resp, false)
 	modeSwitchDelay()
 	return err

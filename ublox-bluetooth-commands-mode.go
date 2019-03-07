@@ -44,7 +44,7 @@ func (ub *UbloxBluetooth) EnterCommandMode() error {
 	if err != nil {
 		return errors.Wrap(err, "[EnterCommandMode] error")
 	}
-	ub.currentMode = dataMode
+	ub.currentMode = commandMode
 	modeSwitchDelay()
 	return nil
 }

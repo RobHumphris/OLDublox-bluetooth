@@ -74,7 +74,7 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 		lastCommand:        "",
 		serialPort:         sp,
 		commDevice:         device,
-		currentMode:        commandMode,
+		currentMode:        extendedDataMode,
 		StartEventReceived: false,
 		readChannel:        make(chan []byte),
 		DataChannel:        make(chan []byte), // make(chan DataResponse),
@@ -84,6 +84,8 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 		stopScanning:       make(chan bool),
 		connectedDevice:    nil,
 	}
+
+	sp.SetEDMFlag(true)
 
 	go ub.serialportReader()
 

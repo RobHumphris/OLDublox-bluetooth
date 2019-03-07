@@ -70,7 +70,7 @@ func OpenSerialPort(devicename string, readTimeout time.Duration) (p *SerialPort
 	sp := &SerialPort{
 		file:             f,
 		fd:               fd,
-		extendedDataMode: false,
+		extendedDataMode: true,
 		contineScanning:  true,
 	}
 

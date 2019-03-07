@@ -51,12 +51,13 @@ var PPPMode = StartMode(0x03)
 
 // SetModuleStartMode issues the command to configure the module's start mode
 func (ub *UbloxBluetooth) SetModuleStartMode(m StartMode) error {
-	d, err := ub.writeAndWait(ModuleStartCommand(m), true)
+	d, err := ub.writeAndWait(ModuleStartCommand(m), false)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("UMSM: %s [%X]", d, d)
-	return nil
+	_, err = ub.writeAndWait(BLEStoreConfig(), false)
+	return err
 }
 
 // ConfigureUblox setups the ublox module

@@ -3,11 +3,13 @@ package ubloxbluetooth
 import (
 	"fmt"
 	"testing"
+
+	u "github.com/RobHumphris/ublox-bluetooth"
 )
 
 // TestDiscovery
 func TestDiscovery(t *testing.T) {
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -33,7 +35,7 @@ func TestDiscovery(t *testing.T) {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	alpha := func(dr *DiscoveryReply) error {
+	alpha := func(dr *u.DiscoveryReply) error {
 		fmt.Printf("Discovery: %v\n", dr)
 		return nil
 	}

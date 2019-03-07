@@ -70,15 +70,15 @@ func factoryReset(bt *ub.UbloxBluetooth) {
 }
 
 func defaultSettings(bt *ub.UbloxBluetooth) {
-	err := bt.SetCommsRate(serial.Default)
+	/*err := bt.SetCommsRate(serial.Default)
 	if err != nil {
 		fmt.Printf("Baud Rate reset error %v\n", err)
 		return
-	}
+	}*/
 
 	serial.SetVerbose(true)
 
-	err = bt.MultipleATCommands()
+	err := bt.MultipleATCommands()
 	if err != nil {
 		log.Fatalf("NewUbloxBluetooth AT error %v\n", err)
 		return
@@ -107,24 +107,23 @@ func defaultSettings(bt *ub.UbloxBluetooth) {
 	}
 	fmt.Println("ConfigureUblox reboot OK")
 
-	err = bt.SetCommsRate(serial.HighSpeed)
-	if err != nil {
-		fmt.Printf("Baud Rate reset error %v\n", err)
-		return
-	}
-
-	/*err = bt.MultipleATCommands()
-	if err != nil {
-		log.Fatalf("NewUbloxBluetooth AT error %v\n", err)
-		return
-	}
-	fmt.Println("FactoryReset AT - 1 response OK")*/
-
 	err = bt.SetModuleStartMode(ub.ExtendedDataMode)
 	if err != nil {
 		fmt.Printf("SetModuleStartMode error %v\n", err)
 	}
 	fmt.Println("SetModuleStartMode OK")
+
+	err = bt.SetWatchdogConfiguration()
+	if err != nil {
+		fmt.Printf("SetWatchdogConfiguration error %v\n", err)
+	}
+	fmt.Println("SetWatchdogConfiguration OK")
+
+	err = bt.SetCommsRate(serial.HighSpeed)
+	if err != nil {
+		fmt.Printf("Baud Rate reset error %v\n", err)
+		return
+	}
 
 	err = bt.RebootUblox()
 	if err != nil {
@@ -132,12 +131,6 @@ func defaultSettings(bt *ub.UbloxBluetooth) {
 		return
 	}
 	fmt.Println("ConfigureUblox reboot OK")
-
-	err = bt.SetCommsRate(serial.HighSpeed)
-	if err != nil {
-		fmt.Printf("Baud Rate reset error %v\n", err)
-		return
-	}
 
 	err = bt.MultipleATCommands()
 	if err != nil {

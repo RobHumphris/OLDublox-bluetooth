@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/RobHumphris/rf-gateway/global"
+	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
-func errorHandler(ub *UbloxBluetooth, t *testing.T) {
+func errorHandler(ub *u.UbloxBluetooth, t *testing.T) {
 	err := ub.ATCommand()
 	if err != nil {
 		t.Fatalf("ATCommand error %v\n", err)
@@ -17,7 +18,7 @@ func errorHandler(ub *UbloxBluetooth, t *testing.T) {
 	fmt.Printf("AT Sent Okay")
 }
 
-func retryCall(fn func(*UbloxBluetooth, string) error, ub *UbloxBluetooth, mac string) (err error) {
+func retryCall(fn func(*u.UbloxBluetooth, string) error, ub *u.UbloxBluetooth, mac string) (err error) {
 	for i := 0; i < global.RetryCount; i++ {
 		err := fn(ub, mac)
 		if err == nil {
@@ -34,27 +35,26 @@ func retryCall(fn func(*UbloxBluetooth, string) error, ub *UbloxBluetooth, mac s
 	return err
 }
 
-func accessDevice(ub *UbloxBluetooth, mac string) error {
+func accessDevice(ub *u.UbloxBluetooth, mac string) error {
 	err := retryCall(accessDeviceFn, ub, mac)
 	return err
 }
 
-func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
-	return ub.ConnectToDevice(deviceAddr, func(cr *ConnectionReply) error {
-		fmt.Printf("[ConnectToDevice] replied with: %v\n", cr)
-		defer ub.DisconnectFromDevice(cr)
+func accessDeviceFn(ub *u.UbloxBluetooth, deviceAddr string) error {
+	return ub.ConnectToDevice(deviceAddr, func() error {
+		defer ub.DisconnectFromDevice()
 
-		err := ub.EnableIndications(cr)
+		err := ub.EnableIndications()
 		if err != nil {
 			return err
 		}
 
-		err = ub.EnableNotifications(cr)
+		err = ub.EnableNotifications()
 		if err != nil {
 			return err
 		}
 
-		unlocked, err := ub.UnlockDevice(cr, password)
+		unlocked, err := ub.UnlockDevice(password)
 		if err != nil {
 			return err
 		}
@@ -63,33 +63,33 @@ func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
 		}
 		fmt.Printf("[UnlockDevice] replied with: %v\n", unlocked)
 
-		version, err := ub.GetVersion(cr)
+		version, err := ub.GetVersion()
 		if err != nil {
 			return err
 		}
 		fmt.Printf("Software Version: %d Hardware Version: %d", version.SoftwareVersion, version.HardwareVersion)
 
-		info, err := ub.GetInfo(cr)
+		info, err := ub.GetInfo()
 		if err != nil {
 			return err
 		}
 		fmt.Printf("[GetInfo] replied with: %v\n", info)
 
-		config, err := ub.ReadConfig(cr)
+		config, err := ub.ReadConfig()
 		if err != nil {
 			return err
 		}
 		fmt.Printf("[ReadConfig] replied with: %v\n", config)
 
 		return nil
-	}, func(cr *ConnectionReply) error {
+	}, func() error {
 		return fmt.Errorf("Disconnected!")
 	})
 }
 
 func TestSingleAccess(t *testing.T) {
 	serial.SetVerbose(true)
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -119,7 +119,7 @@ func TestSingleAccess(t *testing.T) {
 }
 
 func TestMulipleAccesses(t *testing.T) {
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -129,16 +129,6 @@ func TestMulipleAccesses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EnterDataMode error %v\n", err)
 	}
-
-	/*err = ub.ConfigureUblox()
-	if err != nil {
-		t.Fatalf("ConfigureUblox error %v\n", err)
-	}
-
-	err = ub.RebootUblox()
-	if err != nil {
-		t.Fatalf("RebootUblox error %v\n", err)
-	}*/
 
 	err = ub.ATCommand()
 	if err != nil {

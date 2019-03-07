@@ -37,6 +37,16 @@ func RS232SettingsCommand(cmd string) CmdResp {
 	}
 }
 
+// WatchdogCommand sets 't' typem and value
+// where t is 1 value is milliseconds
+// where t is 2 value is 0 or 1
+func WatchdogCommand(t int, v int) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT%s=%d,%d", watchdogSettings, t, v),
+		Resp: empty,
+	}
+}
+
 // FactoryResetCommand sets the ublox device to its Factory settings
 func FactoryResetCommand() CmdResp {
 	return CmdResp{

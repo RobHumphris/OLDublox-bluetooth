@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 	"github.com/pkg/errors"
 )
@@ -39,33 +40,33 @@ func TestAbort(t *testing.T) {
 	// put some events into the sensors logs (assuming connection events are being logged)
 	for i := 0; i < 20; i++ {
 		fmt.Printf("Connect attempt %d\n", i)
-		errr := connectToDevice("D5926479C652r", func(cr *ConnectionReply, t *testing.T) error {
-			return ub.DisconnectFromDevice(cr)
+		errr := connectToDevice("D5926479C652r", func(t *testing.T) error {
+			return ub.DisconnectFromDevice()
 		}, ub, t)
 		if errr != nil {
 			err = errors.Wrapf(err, "connectToDevice error: %v", errr)
 		}
 	}
 
-	err = connectToDevice("D5926479C652r", func(cr *ConnectionReply, t *testing.T) error {
-		defer ub.DisconnectFromDevice(cr)
-		err = ub.EnableNotifications(cr)
+	err = connectToDevice("D5926479C652r", func(t *testing.T) error {
+		defer ub.DisconnectFromDevice()
+		err = ub.EnableNotifications()
 		if err != nil {
 			t.Fatalf("EnableNotifications error %v\n", err)
 		}
 
-		info, err := ub.GetInfo(cr)
+		info, err := ub.GetInfo()
 		if err != nil {
 			t.Fatalf("GetInfo error %v\n", err)
 		}
 
 		startingIndex := info.CurrentSequenceNumber - info.RecordsCount
 		abc := 0
-		err = ub.DownloadLogFile(cr, startingIndex, func(b []byte) error {
+		err = ub.DownloadLogFile(startingIndex, func(b []byte) error {
 			abc++
 			if abc == 10 {
 				fmt.Print("Should Stop\n")
-				return ub.AbortEventLogRead(cr)
+				return ub.AbortEventLogRead()
 			}
 			return nil
 		})
@@ -85,22 +86,22 @@ func TestPagedDownloads(t *testing.T) {
 	defer ub.Close()
 
 	// C1851F6083F8r or CE1A0B7E9D79r
-	err = connectToDevice("D5926479C652r", func(cr *ConnectionReply, t *testing.T) error {
-		defer ub.DisconnectFromDevice(cr)
+	err = connectToDevice("D5926479C652r", func(t *testing.T) error {
+		defer ub.DisconnectFromDevice()
 
-		err := ub.EnableNotifications(cr)
+		err := ub.EnableNotifications()
 		if err != nil {
 			t.Fatalf("EnableNotifications error %v\n", err)
 		}
 
-		info, err := ub.GetInfo(cr)
+		info, err := ub.GetInfo()
 		if err != nil {
 			t.Errorf("GetInfo error %v\n", err)
 		}
 		fmt.Printf("[GetInfo] Current sequence number %d. Records count %d\n", info.CurrentSequenceNumber, info.RecordsCount)
 		serial.SetVerbose(true)
 		startingIndex := info.CurrentSequenceNumber - info.RecordsCount
-		err = ub.DownloadLogFile(cr, startingIndex, func(b []byte) error {
+		err = ub.DownloadLogFile(startingIndex, func(b []byte) error {
 			//fmt.Print(".")
 			return nil
 		})
@@ -122,21 +123,21 @@ func TestEventClear(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("CE1A0B7E9D79r", func(cr *ConnectionReply, t *testing.T) error {
-		defer ub.DisconnectFromDevice(cr)
+	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
+		defer ub.DisconnectFromDevice()
 
-		info, err := ub.GetInfo(cr)
+		info, err := ub.GetInfo()
 		if err != nil {
 			t.Errorf("GetInfo error %v\n", err)
 		}
 		fmt.Printf("[GetInfo] Current sequence number %d. Records count %d\n", info.CurrentSequenceNumber, info.RecordsCount)
 
-		err = ub.ClearEventLog(cr)
+		err = ub.ClearEventLog()
 		if err != nil {
 			t.Fatalf("ClearEventLog error %v\n", err)
 		}
 
-		info, err = ub.GetInfo(cr)
+		info, err = ub.GetInfo()
 		if err != nil {
 			t.Errorf("GetInfo error %v\n", err)
 		}
@@ -156,8 +157,8 @@ func TestReboot(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("CE1A0B7E9D79r", func(cr *ConnectionReply, t *testing.T) error {
-		defer ub.DisconnectFromDevice(cr)
+	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
+		defer ub.DisconnectFromDevice()
 		return nil
 	}, ub, t)
 	if err != nil {
@@ -171,8 +172,8 @@ func TestReboot(t *testing.T) {
 	fmt.Printf("Rebooted")
 }
 
-func setupBluetooth() (*UbloxBluetooth, error) {
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+func setupBluetooth() (*u.UbloxBluetooth, error) {
+	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "NewUbloxBluetooth error")
 	}
@@ -205,23 +206,21 @@ func setupBluetooth() (*UbloxBluetooth, error) {
 	return ub, nil
 }
 
-type TestFunc func(*ConnectionReply, *testing.T) error
+type TestFunc func(*testing.T) error
 
-func connectToDevice(mac string, tfn TestFunc, ub *UbloxBluetooth, t *testing.T) error {
-	return ub.ConnectToDevice(mac, func(cr *ConnectionReply) error {
-		fmt.Printf("[ConnectionReply] %v\n", cr)
-
-		err := ub.EnableNotifications(cr)
+func connectToDevice(mac string, tfn TestFunc, ub *u.UbloxBluetooth, t *testing.T) error {
+	return ub.ConnectToDevice(mac, func() error {
+		err := ub.EnableNotifications()
 		if err != nil {
 			t.Fatalf("EnableNotifications error %v\n", err)
 		}
 
-		err = ub.EnableIndications(cr)
+		err = ub.EnableIndications()
 		if err != nil {
 			t.Fatalf("EnableIndications error %v\n", err)
 		}
 
-		unlocked, err := ub.UnlockDevice(cr, password)
+		unlocked, err := ub.UnlockDevice(password)
 		if err != nil {
 			t.Fatalf("UnlockDevice error %v\n", err)
 		}
@@ -229,29 +228,29 @@ func connectToDevice(mac string, tfn TestFunc, ub *UbloxBluetooth, t *testing.T)
 			t.Fatalf("UnlockDevice error - failed to unlock")
 		}
 
-		return tfn(cr, t)
-	}, func(cr *ConnectionReply) error {
+		return tfn(t)
+	}, func() error {
 		fmt.Println("Disconnected!")
 		return nil
 	})
 }
 
-func exerciseTheDevice(deviceAddr string, ub *UbloxBluetooth, t *testing.T, itteration int, downloadEvents bool, downloadSlotData bool) {
-	err := connectToDevice(deviceAddr, func(cr *ConnectionReply, t *testing.T) error {
+func exerciseTheDevice(deviceAddr string, ub *u.UbloxBluetooth, t *testing.T, itteration int, downloadEvents bool, downloadSlotData bool) {
+	err := connectToDevice(deviceAddr, func(t *testing.T) error {
 		fmt.Printf("[GetInfo] starting\n")
-		info, err := ub.GetInfo(cr)
+		info, err := ub.GetInfo()
 		if err != nil {
 			t.Errorf("GetInfo error %v\n", err)
 		}
 		fmt.Printf("[GetInfo] replied with: %v\n", info)
 
-		version, err := ub.GetVersion(cr)
+		version, err := ub.GetVersion()
 		if err != nil {
 			t.Fatalf("GetVersion error %v\n", err)
 		}
 		fmt.Printf("[GetVersion] replied with: %v\n", version)
 
-		config, err := ub.ReadConfig(cr)
+		config, err := ub.ReadConfig()
 		if err != nil {
 			t.Fatalf("ReadConfig error %v\n", err)
 		}
@@ -260,7 +259,7 @@ func exerciseTheDevice(deviceAddr string, ub *UbloxBluetooth, t *testing.T, itte
 		if downloadEvents {
 			startingIndex := info.CurrentSequenceNumber - info.RecordsCount
 			fmt.Printf("[DownloadLogFile] starting run: %d\n", itteration)
-			err = ub.DownloadLogFile(cr, startingIndex, func(b []byte) error {
+			err = ub.DownloadLogFile(startingIndex, func(b []byte) error {
 				//fmt.Print(".")
 				return nil
 			})
@@ -271,17 +270,17 @@ func exerciseTheDevice(deviceAddr string, ub *UbloxBluetooth, t *testing.T, itte
 		}
 
 		if downloadSlotData {
-			slotCount, err := ub.ReadSlotCount(cr)
+			slotCount, err := ub.ReadSlotCount()
 			if err != nil {
 				t.Errorf("ReadSlotCount error %v\n", err)
 			} else {
 				fmt.Printf("[ReadSlotCount] replied with: %v\n", slotCount)
-				slotInfo, err := ub.ReadSlotInfo(cr, 0)
+				slotInfo, err := ub.ReadSlotInfo(0)
 				if err != nil {
 					t.Errorf("ReadSlotInfo error %v\n", err)
 				} else {
 					fmt.Printf("[ReadSlotInfo] replied with: %v\n", slotInfo)
-					slotData, err := ub.ReadSlotData(cr, 0, 0, slotInfo.Bytes)
+					slotData, err := ub.ReadSlotData(0, 0, slotInfo.Bytes)
 					if err != nil {
 						t.Errorf("ReadSlotData error %v\n", err)
 					}
@@ -290,7 +289,7 @@ func exerciseTheDevice(deviceAddr string, ub *UbloxBluetooth, t *testing.T, itte
 			}
 		}
 
-		err = ub.DisconnectFromDevice(cr)
+		err = ub.DisconnectFromDevice()
 		if err != nil {
 			t.Errorf("DisconnectFromDevice Itteration[%d] error %v\n", itteration, err)
 		}

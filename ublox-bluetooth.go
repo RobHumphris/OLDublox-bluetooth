@@ -23,7 +23,7 @@ type downloadhandler func([]byte) (bool, error)
 type DataMessageHandler func([]byte) (bool, error)
 
 // DeviceEvent functions are called and defined in various events e.g. Connect, Disconnect
-type DeviceEvent func(*ConnectionReply) error
+type DeviceEvent func() error
 
 // DiscoveryReplyHandler handles discovery replies
 type DiscoveryReplyHandler func(*DiscoveryReply) error
@@ -42,6 +42,7 @@ type UbloxBluetooth struct {
 	timeout            time.Duration
 	lastCommand        string
 	serialPort         *serial.SerialPort
+	commDevice         string
 	currentMode        ubloxMode
 	StartEventReceived bool
 	readChannel        chan []byte
@@ -49,6 +50,7 @@ type UbloxBluetooth struct {
 	EDMChannel         chan []byte
 	ErrorChannel       chan error
 	CompletedChannel   chan bool
+	stopScanning       chan bool
 	connectedDevice    *ConnectionReply
 	disconnectHandler  DeviceEvent
 	disconnectExpected bool
@@ -71,6 +73,7 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 		timeout:            timeout,
 		lastCommand:        "",
 		serialPort:         sp,
+		commDevice:         device,
 		currentMode:        commandMode,
 		StartEventReceived: false,
 		readChannel:        make(chan []byte),
@@ -78,12 +81,76 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 		EDMChannel:         make(chan []byte),
 		ErrorChannel:       make(chan error),
 		CompletedChannel:   make(chan bool),
+		stopScanning:       make(chan bool),
 		connectedDevice:    nil,
 	}
 
 	go ub.serialportReader()
 
 	return ub, err
+}
+
+func (ub *UbloxBluetooth) serialportReader() {
+	go ub.serialPort.ScanPort(ub.readChannel, ub.EDMChannel, ub.ErrorChannel)
+
+	for {
+		select {
+		case b := <-ub.readChannel:
+			b = bytes.Trim(b, newline)
+			if len(b) != 0 {
+				switch b[0] {
+				case 'A':
+					ub.processATResponse(b)
+				case '+':
+					ub.DataChannel <- b
+				default:
+					ub.handleGeneralMessage(b)
+				}
+			}
+		case edmData := <-ub.EDMChannel:
+			err := ub.ParseEDMMessage(edmData)
+			if err != nil {
+				ub.ErrorChannel <- err
+			}
+		case _ = <-ub.stopScanning:
+			fmt.Println("A")
+			ub.serialPort.StopScanning()
+			return
+		}
+	}
+}
+
+// ResetSerial stops reading threads and
+func (ub *UbloxBluetooth) ResetSerial() error {
+	ub.stopScanning <- true
+	ub.serialPort.Close()
+
+	sp, err := serial.OpenSerialPort(ub.commDevice, ub.timeout)
+	if err != nil {
+		return err
+	}
+
+	err = sp.Flush()
+	if err != nil {
+		sp.Close()
+		return err
+	}
+
+	ub.serialPort = sp
+	go ub.serialportReader()
+
+	return nil
+}
+
+// Close shuts down the serial port, can closes communication channels.
+func (ub *UbloxBluetooth) Close() {
+	ub.serialPort.Close()
+
+	close(ub.readChannel)
+	close(ub.DataChannel)
+	close(ub.EDMChannel)
+	close(ub.CompletedChannel)
+	close(ub.ErrorChannel)
 }
 
 // SetCommsRate sets the rate to either: Default BaudRate, or HighSpeed
@@ -228,43 +295,6 @@ func (ub *UbloxBluetooth) HandleDiscovery(expectedResponse string, fn Discoveryh
 			return e
 		case <-time.After(ub.timeout):
 			return fmt.Errorf("Timeout")
-		}
-	}
-}
-
-// Close shuts down the serial port, can closes communication channels.
-func (ub *UbloxBluetooth) Close() {
-	ub.serialPort.Close()
-
-	close(ub.readChannel)
-	close(ub.DataChannel)
-	close(ub.EDMChannel)
-	close(ub.CompletedChannel)
-	close(ub.ErrorChannel)
-}
-
-func (ub *UbloxBluetooth) serialportReader() {
-	go ub.serialPort.ScanPort(ub.readChannel, ub.EDMChannel, ub.ErrorChannel)
-
-	for {
-		select {
-		case b := <-ub.readChannel:
-			b = bytes.Trim(b, newline)
-			if len(b) != 0 {
-				switch b[0] {
-				case 'A':
-					ub.processATResponse(b)
-				case '+':
-					ub.DataChannel <- b
-				default:
-					ub.handleGeneralMessage(b)
-				}
-			}
-		case edmData := <-ub.EDMChannel:
-			err := ub.ParseEDMMessage(edmData)
-			if err != nil {
-				ub.ErrorChannel <- err
-			}
 		}
 	}
 }

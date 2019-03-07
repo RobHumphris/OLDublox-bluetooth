@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"testing"
 
+	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
 func TestATCommand(t *testing.T) {
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}

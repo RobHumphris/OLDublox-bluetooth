@@ -6,17 +6,15 @@ import (
 	"time"
 
 	"github.com/RobHumphris/rf-gateway/global"
+	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 	retry "github.com/avast/retry-go"
 	"github.com/pkg/errors"
 )
 
-var timeout = 6 * time.Second
-var password = []byte{'A', 'B', 'C'}
-
 func TestMultipleConnects(t *testing.T) {
 	serial.SetVerbose(true)
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -55,7 +53,7 @@ func TestMultipleConnects(t *testing.T) {
 			//e := doConnect(ub, "C1851F6083F8r", i)
 			e := doConnect(ub, "CE1A0B7E9D79r", i)
 			if e != nil {
-				fmt.Printf("!")
+				fmt.Printf("doConnect error %v", err)
 			}
 			return e
 		},
@@ -67,33 +65,33 @@ func TestMultipleConnects(t *testing.T) {
 	}
 }
 
-func doConnect(ub *UbloxBluetooth, mac string, count int) error {
+func doConnect(ub *u.UbloxBluetooth, mac string, count int) error {
 	fmt.Print("C")
-	err := ub.ConnectToDevice(mac, func(cr *ConnectionReply) error {
-		defer ub.DisconnectFromDevice(cr)
+	err := ub.ConnectToDevice(mac, func() error {
+		defer ub.DisconnectFromDevice()
 
 		time.Sleep(global.BluetoothPostConnectDelay)
 
 		fmt.Print("N")
-		err := ub.EnableNotifications(cr)
+		err := ub.EnableNotifications()
 		if err != nil {
 			return errors.Wrapf(err, "EnableNotifications mac: %s count: %d\n", mac, count)
 		}
 
 		fmt.Print("I")
-		err = ub.EnableIndications(cr)
+		err = ub.EnableIndications()
 		if err != nil {
 			return errors.Wrapf(err, "EnableIndications mac: %s count: %d\n", mac, count)
 		}
 
 		fmt.Print("U")
-		_, err = ub.UnlockDevice(cr, password)
+		_, err = ub.UnlockDevice(password)
 		if err != nil {
 			return errors.Wrapf(err, "UnlockDevice mac: %s count: %d\n", mac, count)
 		}
 		fmt.Print("D\n")
 		return nil
-	}, func(cr *ConnectionReply) error {
+	}, func() error {
 		return fmt.Errorf("Disconnected")
 	})
 	if err != nil {

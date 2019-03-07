@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
+	ub "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
-func setupForSerialTests(t *testing.T, echoOff bool) (*UbloxBluetooth, error) {
-	ub, err := NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+func setupForSerialTests(t *testing.T, echoOff bool) (*ub.UbloxBluetooth, error) {
+	ub, err := ub.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -27,6 +28,32 @@ func setupForSerialTests(t *testing.T, echoOff bool) (*UbloxBluetooth, error) {
 	}
 
 	return ub, err
+}
+
+func TestReset(t *testing.T) {
+	ub, err := setupForSerialTests(t, false)
+	if err != nil {
+		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+	}
+
+	err = ub.ATCommand()
+	if err != nil {
+		t.Fatalf("AT Command error %v\n", err)
+	}
+
+	err = ub.ResetSerial()
+	if err != nil {
+		t.Fatalf("ResetSerial error %v\n", err)
+	}
+
+	time.Sleep(5 * time.Second)
+
+	err = ub.ATCommand()
+	if err != nil {
+		t.Fatalf("AT Command error %v\n", err)
+	}
+
+	ub.Close()
 }
 
 func TestDataMode(t *testing.T) {

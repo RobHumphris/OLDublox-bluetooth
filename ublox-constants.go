@@ -20,6 +20,7 @@ const rebootResponseString = "+STARTUP"
 const factoryReset = "+UFACTORY"
 const moduleStartMode = "+UMSM"
 const moduleStartModeResponseString = "+UMSM:"
+const watchdogSettings = "+UDWS"
 
 var rebootResponse = []byte(rebootResponseString)
 

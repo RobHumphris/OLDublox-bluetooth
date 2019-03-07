@@ -16,7 +16,8 @@ type EMDCmdResp struct {
 	Resp []byte
 }
 
-func newEMDCmdBytes(payload []byte) []byte {
+// NewEMDCmdBytes creates an EDM command containing the `payload` content
+func NewEMDCmdBytes(payload []byte) []byte {
 	l := uint16(len(payload))
 	b := make([]byte, l+EDMPayloadOverhead)
 	b[0] = EDMStartByte
@@ -37,7 +38,7 @@ func NewEDMATCommand(atCommand string) []byte {
 	b[1] = 0x44
 	copy(b[2:], cmd)
 	b[2+l] = 0x0D
-	return newEMDCmdBytes(b)
+	return NewEMDCmdBytes(b)
 }
 
 const ConnectEvent = byte(0x11)
@@ -76,12 +77,8 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 	case ATEvent:
 		data := removeNewlines(msg[2 : len(msg)-1])
 		// we check for disconnect events disconnectResponse
-		if bytes.HasPrefix(data, disconnectResponse) {
-			if ub.disconnectHandler != nil {
-				if !ub.disconnectExpected {
-					ub.ErrorChannel <- ub.disconnectHandler(ub.connectedDevice)
-				}
-			}
+		if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
+			ub.handleUnexpectedDisconnection()
 		}
 		ub.DataChannel <- data
 	}

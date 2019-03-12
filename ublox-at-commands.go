@@ -71,6 +71,22 @@ func RebootCommand() CmdResp {
 	}
 }
 
+// GetRSSICommand - Returns the current Received signal strength for the device with the specified `address`
+func GetRSSICommand(address string) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT%s=%s", getRSSI, address),
+		Resp: getRSSIResponseString,
+	}
+}
+
+// PeerListCommand - queries the connected Ublox device for all connected peers
+func PeerListCommand() CmdResp {
+	return CmdResp{
+		Cmd:  peerList,
+		Resp: peerListResponseString,
+	}
+}
+
 // DiscoveryCommand - commands that all is discovered
 func DiscoveryCommand() CmdResp {
 	return CmdResp{

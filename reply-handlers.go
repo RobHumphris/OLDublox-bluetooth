@@ -448,3 +448,12 @@ func ProcessDisconnectReply(d []byte) (bool, error) {
 	}
 	return b[1][0] == '0', nil
 }
+
+// ProcessRSSIReply - picks the data from the response in +UBTRSS:<rssi>
+func ProcessRSSIReply(d []byte) (string, error) {
+	b := bytes.Split(d, getRSSIResponse)
+	if len(b) < 2 {
+		return "??", fmt.Errorf("get RSSI error %q", d)
+	}
+	return string(b[1]), nil
+}

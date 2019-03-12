@@ -51,8 +51,6 @@ const ResentConnect = byte(0x56)
 const iPhoneEvent = byte(0x61)
 const StartEvent = byte(0x71)
 
-var byebye = []byte("+UUBTACLD")
-
 func removeNewlines(data []byte) []byte {
 	return bytes.ReplaceAll(data, []byte(newline), []byte(""))
 }

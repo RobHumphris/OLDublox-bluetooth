@@ -17,12 +17,20 @@ const storeConfig = "AT&W"
 
 const powerOff = "+CPWROFF"
 const rebootResponseString = "+STARTUP"
+
+var rebootResponse = []byte(rebootResponseString)
+
 const factoryReset = "+UFACTORY"
 const moduleStartMode = "+UMSM"
 const moduleStartModeResponseString = "+UMSM:"
 const watchdogSettings = "+UDWS"
+const getRSSI = "+UBTRSS"
+const getRSSIResponseString = "+UBTRSS:"
 
-var rebootResponse = []byte(rebootResponseString)
+var getRSSIResponse = []byte(getRSSIResponseString)
+
+const peerList = "+UDLP?"
+const peerListResponseString = "+UDLP:"
 
 const discovery = "+UBTD"
 const discoveryResponseString = "+UBTD:"

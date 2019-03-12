@@ -23,108 +23,6 @@ var readSlotInfoCommand = []byte{0x0F}
 var readSlotDataCommand = []byte{0x10}
 var creditCommand = []byte{0x11}
 
-// DiscoveryCommand issues the Discover command and calls the DiscoveryReplyHandler
-func (ub *UbloxBluetooth) DiscoveryCommand(fn DiscoveryReplyHandler) error {
-	dc := DiscoveryCommand()
-	err := ub.Write(dc.Cmd)
-	if err != nil {
-		return err
-	}
-
-	return ub.HandleDiscovery(dc.Resp, func(d []byte) (bool, error) {
-		dr, err := ProcessDiscoveryReply(d)
-		if err == nil {
-			err = fn(dr)
-		} else if err != ErrUnexpectedResponse {
-			return false, err
-		}
-		return true, nil
-	})
-}
-
-// ConnectToDevice attempts to connect to the device with the specified address.
-func (ub *UbloxBluetooth) ConnectToDevice(addr string, onConnect DeviceEvent, onDisconnect DeviceEvent) error {
-	d, err := ub.writeAndWait(ConnectCommand(addr), true)
-	if err != nil {
-		return err
-	}
-
-	cr, err := NewConnectionReply(string(d))
-	if err != nil {
-		return err
-	}
-
-	ub.connectedDevice = cr
-	ub.disconnectHandler = onDisconnect
-	ub.disconnectExpected = false
-	return onConnect()
-}
-
-func (ub *UbloxBluetooth) handleUnexpectedDisconnection() {
-	ub.connectedDevice = nil
-	ub.disconnectHandler = nil
-	ub.disconnectExpected = false
-	if ub.disconnectHandler != nil {
-		ub.ErrorChannel <- ub.disconnectHandler()
-	}
-}
-
-// DisconnectFromDevice issues the disconnect command using the handle from the ConnectionReply
-func (ub *UbloxBluetooth) DisconnectFromDevice() error {
-	if ub.connectedDevice == nil {
-		return fmt.Errorf("ConnectionReply is nil")
-	}
-
-	ub.disconnectExpected = true
-
-	d, err := ub.writeAndWait(DisconnectCommand(ub.connectedDevice.Handle), true)
-	if err != nil {
-		return err
-	}
-
-	ok, err := ProcessDisconnectReply(d)
-	if !ok {
-		return fmt.Errorf("Incorrect disconnect reply %q", d)
-	}
-	ub.connectedDevice = nil
-	ub.disconnectHandler = nil
-	ub.disconnectExpected = false
-	return err
-}
-
-// EnableIndications instructs the connected device to initialise indiciations
-func (ub *UbloxBluetooth) EnableIndications() error {
-	if ub.connectedDevice == nil {
-		return fmt.Errorf("ConnectionReply is nil")
-	}
-
-	_, err := ub.writeAndWait(WriteCharacteristicConfigurationCommand(ub.connectedDevice.Handle, commandCCCDHandle, 2), false)
-	return err
-}
-
-// EnableNotifications instructs the connected device to initialise notifications
-func (ub *UbloxBluetooth) EnableNotifications() error {
-	if ub.connectedDevice == nil {
-		return fmt.Errorf("ConnectionReply is nil")
-	}
-
-	_, err := ub.writeAndWait(WriteCharacteristicConfigurationCommand(ub.connectedDevice.Handle, dataCCCDHandle, 1), false)
-	return err
-}
-
-// ReadCharacterisitic reads the
-func (ub *UbloxBluetooth) ReadCharacterisitic() ([]byte, error) {
-	if ub.connectedDevice == nil {
-		return nil, fmt.Errorf("ConnectionReply is nil")
-	}
-	d, err := ub.writeAndWait(ReadCharacterisiticCommand(ub.connectedDevice.Handle, commandValueHandle), true)
-	if err != nil {
-		return nil, errors.Wrapf(err, "ReadCharacterisitic error")
-	}
-	fmt.Printf("ReadCharacterisitic: %s\n", d)
-	return d, nil
-}
-
 // UnlockDevice attempts to unlock the device with the password provided.
 func (ub *UbloxBluetooth) UnlockDevice(password []byte) (bool, error) {
 	if ub.connectedDevice == nil {
@@ -247,9 +145,9 @@ func (ub *UbloxBluetooth) DownloadLogFile(startingIndex int, fn DownloadLogHandl
 	if ub.connectedDevice == nil {
 		return fmt.Errorf("ConnectionReply is nil")
 	}
-	si := uint16ToString(uint16(startingIndex))
 
-	d, errr := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, readEventLogCommand, si), true)
+	h := fmt.Sprintf("%s%s", uint16ToString(uint16(startingIndex)), uint8ToString(uint8(DefaultCredit)))
+	d, errr := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, readEventLogCommand, h), true)
 	if errr != nil {
 		return errors.Wrap(errr, "readEventLogCommand error")
 	}
@@ -257,11 +155,6 @@ func (ub *UbloxBluetooth) DownloadLogFile(startingIndex int, fn DownloadLogHandl
 	expected, errr := ProcessEventsReply(d)
 	if errr != nil {
 		return errors.Wrap(errr, "ProcessEventsReply error")
-	}
-
-	errr = ub.SendCredits(DefaultCredit)
-	if errr != nil {
-		return errors.Wrap(errr, "SendCredits error")
 	}
 
 	notificationsReceived := 0

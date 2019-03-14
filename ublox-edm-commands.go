@@ -61,11 +61,11 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 		return fmt.Errorf("Message does not start with 0x00")
 	}
 
+	data := removeNewlines(msg[2 : len(msg)-1])
 	switch msg[1] {
 	case StartEvent:
 		ub.StartEventReceived = true
 	case ATConfirmation:
-		data := removeNewlines(msg[2 : len(msg)-1])
 		switch data[0] {
 		case '+':
 			ub.DataChannel <- data
@@ -73,7 +73,6 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 			ub.handleGeneralMessage(data)
 		}
 	case ATEvent:
-		data := removeNewlines(msg[2 : len(msg)-1])
 		// we check for disconnect events disconnectResponse
 		if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
 			ub.handleUnexpectedDisconnection()

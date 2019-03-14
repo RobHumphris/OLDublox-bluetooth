@@ -28,6 +28,9 @@ const readSlotCountReply = "0E"
 const readSlotInfoReply = "0F"
 const readSlotDataReply = "10"
 
+var readSlotDataReplyBytes = []byte(readSlotDataReply)
+var readEventLogReplyBytes = []byte(readEventLogReply)
+
 func isIndicationResponseValid(sa []string) bool {
 	return sa[0] == "0" && sa[1] == "13"
 }
@@ -413,8 +416,8 @@ func ProcessDiscoveryReply(d []byte) (*DiscoveryReply, error) {
 }
 
 // ProcessEventsReply returns the expected number of event notifications that we're about to receive.
-func ProcessEventsReply(d []byte) (int, error) {
-	t, err := splitOutResponse(d, readEventLogReply)
+func ProcessEventsReply(d []byte, reply string) (int, error) {
+	t, err := splitOutResponse(d, reply)
 	if err != nil {
 		return -1, err
 	}

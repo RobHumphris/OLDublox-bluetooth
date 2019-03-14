@@ -17,7 +17,12 @@ type DataResponse struct {
 
 // DataHandler is called when the UbloxBluetooth DataChannel recieves a message
 type Discoveryhandler func([]byte) (bool, error)
-type downloadhandler func([]byte) (bool, error)
+
+// DownloadNotificationHandler is called each time that a Notification is received during a download
+type DownloadNotificationHandler func([]byte) error
+
+// DownloadIndicationHandler is called each time that an Indication is received during a download
+type DownloadIndicationHandler func(string) error
 
 // DataMessageHandler functions are invoked when data is recieved.
 type DataMessageHandler func([]byte) (bool, error)
@@ -27,9 +32,6 @@ type DeviceEvent func() error
 
 // DiscoveryReplyHandler handles discovery replies
 type DiscoveryReplyHandler func(*DiscoveryReply) error
-
-// DownloadLogHandler functions are invoked with
-type DownloadLogHandler func([]byte) error
 
 type ubloxMode int
 
@@ -228,33 +230,61 @@ func handleUnsolicitedMessage(data []byte) error {
 	return nil
 }
 
-// HandleDataDownload handles data notifications
-func (ub *UbloxBluetooth) HandleDataDownload(expected int, fn downloadhandler) (int, error) {
+func getPayload(d []byte, sep []byte) []byte {
+	s := bytes.Split(d, sep)
+	return s[1]
+}
+
+var notificationSeperator = []byte("16,")
+var indicationSeperator = []byte("13,")
+
+// HandleDataDownload enables data download (Events and Slots). Passed variables are:
+// `expected` number of notifications. This handles the credit based flow mechanism and does
+// not return until the expected number of notifications and terminating indication are received.
+//
+// `commandReply` the Veh command (0x07 or 0x10)
+//
+// `dnh` Notification handler function which is invoked each time a notification is received.
+//
+// `dih` Indication handler function, which is invoked each time an indication is received.
+func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, dnh DownloadNotificationHandler, dih func([]byte) error) error {
 	var err error
 	received := 0
-	loop := true
-	indicationRcvd := false
+	dataComplete := false
+	indicationRecieved := false
 	for {
 		select {
 		case data := <-ub.DataChannel:
-			if received < expected {
-				received++
-				loop, err = fn(data)
-			} else {
-				// now waiting for +UUBTGI:0,13,0700
-				if bytes.HasPrefix(data, gattIndicationResponse) {
-					_, e := splitOutResponse(data, readEventLogReply)
-					if e != nil {
-						return received, err
-					}
-					indicationRcvd = true
+			if bytes.HasPrefix(data, gattNotificationResponse) {
+				err = dnh(getPayload(data, notificationSeperator))
+				if err != nil {
+					return err
 				}
-			}
-			if (received == expected && indicationRcvd) || !loop {
-				return received, err
+				received++
+				if received%halfwayPoint == 0 {
+					err = ub.SendCredits(halfwayPoint)
+					if err != nil {
+						return err
+					}
+				}
+				dataComplete = (received == expected)
+				if dataComplete && indicationRecieved {
+					return nil
+				}
+			} else if bytes.HasPrefix(data, gattIndicationResponse) {
+				err = dih(getPayload(data, indicationSeperator))
+				if err != nil {
+					return err
+				}
+				indicationRecieved = true
+				if dataComplete && indicationRecieved {
+					return nil
+				}
+			} else {
+				return fmt.Errorf("unexpected: %s", data)
 			}
 		case <-time.After(ub.timeout):
-			return received, fmt.Errorf("Timeout")
+			return fmt.Errorf("Timeout")
 		}
 	}
 }

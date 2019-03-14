@@ -2,7 +2,6 @@ package ubloxbluetooth
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -113,6 +112,7 @@ func (ub *UbloxBluetooth) ReadName() (string, error) {
 	return name, nil
 }
 
+// WriteName sets the device's name
 func (ub *UbloxBluetooth) WriteName(name string) error {
 	if ub.connectedDevice == nil {
 		return fmt.Errorf("ConnectionReply is nil")
@@ -127,7 +127,8 @@ func (ub *UbloxBluetooth) WriteName(name string) error {
 // DefaultCredit says that we can handle 16 messages in our FIFO
 const DefaultCredit = 16
 
-var halfwayPoint = DefaultCredit / 2
+var defaultCreditString = uint8ToString(uint8(DefaultCredit))
+var halfwayPoint = DefaultCredit
 
 // SendCredits messages the connected device to say that it can accept `credit` number of messages
 func (ub *UbloxBluetooth) SendCredits(credit int) error {
@@ -140,65 +141,60 @@ func (ub *UbloxBluetooth) SendCredits(credit int) error {
 	return err
 }
 
-// DownloadLogFile requests a number of log records to be downloaded.
-func (ub *UbloxBluetooth) DownloadLogFile(startingIndex int, fn DownloadLogHandler) error {
+// DownloadSlotData downloads slot data from
+func (ub *UbloxBluetooth) DownloadSlotData(slot int, slotOffset int, dnh DownloadNotificationHandler, dih DownloadIndicationHandler) error {
+	commandParameters := fmt.Sprintf("%s%s%s", uint16ToString(uint16(slot)), uint16ToString(uint16(slotOffset)), defaultCreditString)
+
+	expectedSequence := 0
+	return ub.downloadData(readSlotDataCommand, commandParameters, readSlotDataReply, func(d []byte) error {
+		if d != nil {
+			l := len(d)
+			sequenceNumber := stringToInt(string(d[l-4 : l]))
+			if sequenceNumber != expectedSequence {
+				return fmt.Errorf("sequence number: %d expected %d", sequenceNumber, expectedSequence)
+			}
+
+			err := dnh(d[:l-4])
+			if err != nil {
+				return errors.Wrap(err, "download hander error")
+			}
+			expectedSequence++
+		}
+		return nil
+	}, func(s []byte) error {
+		if bytes.HasPrefix(s, readSlotDataReplyBytes) {
+			return dih(string(s[4:]))
+		}
+		return fmt.Errorf("[DownloadSlotData] indication %s does not start with %s", s, readSlotDataReply)
+	})
+}
+
+// DownloadEventLog requests a number of log records to be downloaded.
+func (ub *UbloxBluetooth) DownloadEventLog(startingIndex int, fn DownloadNotificationHandler) error {
+	commandParameters := fmt.Sprintf("%s%s", uint16ToString(uint16(startingIndex)), defaultCreditString)
+	return ub.downloadData(readEventLogCommand, commandParameters, readEventLogReply, fn, func(d []byte) error {
+		if bytes.HasPrefix(d, readEventLogReplyBytes) {
+			return nil
+		}
+		return fmt.Errorf("[DownloadEventLog] indication %s does not start with %s", d, readEventLogReply)
+	})
+}
+
+func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string, reply string, dnh DownloadNotificationHandler, dih func([]byte) error) error {
 	if ub.connectedDevice == nil {
 		return fmt.Errorf("ConnectionReply is nil")
 	}
 
-	h := fmt.Sprintf("%s%s", uint16ToString(uint16(startingIndex)), uint8ToString(uint8(DefaultCredit)))
-	d, errr := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, readEventLogCommand, h), true)
-	if errr != nil {
-		return errors.Wrap(errr, "readEventLogCommand error")
+	d, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, command, commandParameters), true)
+	if err != nil {
+		return errors.Wrap(err, "[downloadData] Command error")
 	}
 
-	expected, errr := ProcessEventsReply(d)
-	if errr != nil {
-		return errors.Wrap(errr, "ProcessEventsReply error")
+	expected, err := ProcessEventsReply(d, reply)
+	if err != nil {
+		return errors.Wrap(err, "[downloadData] ProcessEventsReply error")
 	}
-
-	notificationsReceived := 0
-
-	received, errr := ub.HandleDataDownload(expected, func(d []byte) (bool, error) {
-		var err error
-		if bytes.HasPrefix(d, gattNotificationResponse) {
-			d, e := splitOutNotification(d, readEventLogReply)
-			if e != nil {
-				err = errors.Wrapf(err, e.Error())
-			} else {
-				notificationsReceived++
-				dt, e := hex.DecodeString(string(d[:]))
-				if e != nil {
-					err = errors.Wrapf(err, e.Error())
-				} else {
-					e = fn(dt)
-					if e != nil {
-						err = errors.Wrapf(err, e.Error())
-					}
-				}
-				if notificationsReceived%halfwayPoint == 0 {
-					e = ub.SendCredits(halfwayPoint)
-					if e != nil {
-						err = errors.Wrapf(err, e.Error())
-					}
-				}
-			}
-		} else if bytes.HasPrefix(d, gattIndicationResponse) {
-			_, e := splitOutResponse(d, readEventLogReply)
-			if err == nil {
-				err = e
-			} else {
-				err = errors.Wrapf(err, "notification error %v ", e)
-			}
-			return false, e
-		}
-		return true, err
-	})
-
-	if received != expected {
-		errr = errors.Wrap(errr, fmt.Sprintf("expected %d received %d\n", expected, received))
-	}
-	return errr
+	return ub.HandleDataDownload(expected, reply, dnh, dih)
 }
 
 // ClearEventLog requests that the event log of the connected device be cleared.
@@ -249,42 +245,4 @@ func (ub *UbloxBluetooth) ReadSlotInfo(slotNumber int) (*SlotInfoReply, error) {
 		return nil, err
 	}
 	return NewSlotInfoReply(d)
-}
-
-// ReadSlotData gets the data for the given slot and offset
-func (ub *UbloxBluetooth) ReadSlotData(slotNumber int, offset int, requiredBytes int) ([]byte, error) {
-	if ub.connectedDevice == nil {
-		return nil, fmt.Errorf("ConnectionReply is nil")
-	}
-
-	slot := uint16ToString(uint16(slotNumber))
-	off := uint16ToString(uint16(offset))
-	d, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, readSlotDataCommand, slot+off), true)
-	if err != nil {
-		return nil, err
-	}
-
-	expectedNotifications, err := ProcessSlotsReply(d)
-	actualNotifications := 0
-	data := []byte{}
-	_, err = ub.HandleDataDownload(expectedNotifications, func(d []byte) (bool, error) {
-		if bytes.HasPrefix(d, gattNotificationResponse) {
-			actualNotifications++
-			d, e := splitOutNotification(d, readSlotInfoReply)
-			if e != nil {
-				return false, e
-			}
-			bytes, e := hex.DecodeString(string(d[:]))
-			if err != nil {
-				return false, err
-			}
-			data = append(data, bytes...)
-			if len(data) < requiredBytes {
-				return true, nil
-			}
-		}
-		return false, nil
-	})
-
-	return nil, err
 }

@@ -48,7 +48,7 @@ func TestAbort(t *testing.T) {
 		}
 	}
 
-	err = connectToDevice("D5926479C652r", func(t *testing.T) error {
+	/*err = connectToDevice("D5926479C652r", func(t *testing.T) error {
 		defer ub.DisconnectFromDevice()
 		err = ub.EnableNotifications()
 		if err != nil {
@@ -71,7 +71,7 @@ func TestAbort(t *testing.T) {
 			return nil
 		})
 		return err
-	}, ub, t)
+	}, ub, t)*/
 
 	if err != nil {
 		t.Fatalf("TestAbort error %v\n", err)
@@ -100,14 +100,14 @@ func TestPagedDownloads(t *testing.T) {
 		}
 		fmt.Printf("[GetInfo] Current sequence number %d. Records count %d\n", info.CurrentSequenceNumber, info.RecordsCount)
 		serial.SetVerbose(true)
-		startingIndex := info.CurrentSequenceNumber - info.RecordsCount
+		/*startingIndex := info.CurrentSequenceNumber - info.RecordsCount
 		err = ub.DownloadLogFile(startingIndex, func(b []byte) error {
 			//fmt.Print(".")
 			return nil
 		})
 		if err != nil {
 			t.Errorf("[DownloadLogFile] error: %v\n", err)
-		}
+		}*/
 		return err
 	}, ub, t)
 
@@ -257,7 +257,7 @@ func exerciseTheDevice(deviceAddr string, ub *u.UbloxBluetooth, t *testing.T, it
 		}
 		fmt.Printf("[ReadConfig] replied with: %v\n", config)
 
-		if downloadEvents {
+		/*if downloadEvents {
 			startingIndex := info.CurrentSequenceNumber - info.RecordsCount
 			fmt.Printf("[DownloadLogFile] starting run: %d\n", itteration)
 			err = ub.DownloadLogFile(startingIndex, func(b []byte) error {
@@ -288,7 +288,7 @@ func exerciseTheDevice(deviceAddr string, ub *u.UbloxBluetooth, t *testing.T, it
 					fmt.Printf("[ReadSlotData] replied with: %v\n", slotData)
 				}
 			}
-		}
+		}*/
 
 		err = ub.DisconnectFromDevice()
 		if err != nil {

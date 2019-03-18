@@ -33,8 +33,6 @@ func (ub *UbloxBluetooth) UnlockDevice(password []byte) (bool, error) {
 		return false, errors.Wrapf(err, "UnlockDevice error")
 	}
 
-	ub.ReadCharacterisitic()
-
 	return ProcessUnlockReply(d)
 }
 
@@ -61,8 +59,6 @@ func (ub *UbloxBluetooth) GetInfo() (*InfoReply, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "GetInfo error")
 	}
-
-	ub.ReadCharacterisitic()
 
 	return NewInfoReply(d)
 }

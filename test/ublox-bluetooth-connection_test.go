@@ -14,7 +14,7 @@ import (
 
 func TestMultipleConnects(t *testing.T) {
 	serial.SetVerbose(true)
-	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}

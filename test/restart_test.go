@@ -17,7 +17,7 @@ func handleFatal(s string, err error) {
 }
 
 func TestResetWatchdog(t *testing.T) {
-	bt, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	bt, err := u.NewUbloxBluetooth(timeout)
 	if err != nil {
 		handleFatal("NewUbloxBluetooth error", err)
 	}
@@ -36,7 +36,7 @@ func TestResetWatchdog(t *testing.T) {
 }
 
 func TestSetWatchdog(t *testing.T) {
-	bt, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	bt, err := u.NewUbloxBluetooth(timeout)
 	if err != nil {
 		handleFatal("NewUbloxBluetooth error", err)
 	}
@@ -58,7 +58,7 @@ func TestRestViaDTR(t *testing.T) {
 	var err error
 	serial.SetVerbose(true)
 
-	bt, err = u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	bt, err = u.NewUbloxBluetooth(timeout)
 	if err != nil {
 		handleFatal("NewUbloxBluetooth error", err)
 	}
@@ -76,7 +76,7 @@ func TestRestart(t *testing.T) {
 	var err error
 	serial.SetVerbose(true)
 
-	bt, err = u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	bt, err = u.NewUbloxBluetooth(timeout)
 	if err != nil {
 		handleFatal("NewUbloxBluetooth error", err)
 	}

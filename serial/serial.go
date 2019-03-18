@@ -168,7 +168,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 					expectedLength = int(binary.BigEndian.Uint16(line[1:3])) + EDMPayloadOverhead
 				} else if lineLen == expectedLength {
 					if line[expectedLength-1] == EDMStopByte {
-						showMsg("EDM R: %s\n[%x]", buf, buf)
+						showMsg("EDM R: %s\n[%x]", line, line)
 						edmChan <- line[EDMHeaderSize:expectedLength]
 						line = []byte{}
 						expectedLength = -1

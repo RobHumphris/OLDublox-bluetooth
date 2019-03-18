@@ -174,7 +174,7 @@ func TestReboot(t *testing.T) {
 }
 
 func setupBluetooth() (*u.UbloxBluetooth, error) {
-	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth(timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "NewUbloxBluetooth error")
 	}

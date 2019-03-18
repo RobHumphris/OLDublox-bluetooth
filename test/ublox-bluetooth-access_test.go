@@ -89,7 +89,7 @@ func accessDeviceFn(ub *u.UbloxBluetooth, deviceAddr string) error {
 
 func TestSingleAccess(t *testing.T) {
 	serial.SetVerbose(true)
-	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -100,16 +100,6 @@ func TestSingleAccess(t *testing.T) {
 		t.Fatalf("EnterDataMode error %v\n", err)
 	}
 
-	/*err = ub.ConfigureUblox()
-	if err != nil {
-		t.Fatalf("ConfigureUblox error %v\n", err)
-	}
-
-	err = ub.RebootUblox()
-	if err != nil {
-		t.Fatalf("RebootUblox error %v\n", err)
-	}*/
-
 	err = ub.ATCommand()
 	if err != nil {
 		t.Errorf("AT error %v\n", err)
@@ -119,7 +109,7 @@ func TestSingleAccess(t *testing.T) {
 }
 
 func TestMulipleAccesses(t *testing.T) {
-	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}

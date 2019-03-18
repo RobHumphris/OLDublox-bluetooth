@@ -90,7 +90,7 @@ func PeerListCommand() CmdResp {
 // DiscoveryCommand - commands that all is discovered
 func DiscoveryCommand() CmdResp {
 	return CmdResp{
-		Cmd:  fmt.Sprintf("AT%s", discovery),
+		Cmd:  fmt.Sprintf("AT%s=4,1", discovery),
 		Resp: discoveryResponseString,
 	}
 }

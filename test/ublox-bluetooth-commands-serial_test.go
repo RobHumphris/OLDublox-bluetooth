@@ -10,7 +10,7 @@ import (
 )
 
 func setupForSerialTests(t *testing.T, echoOff bool) (*ub.UbloxBluetooth, error) {
-	ub, err := ub.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := ub.NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}

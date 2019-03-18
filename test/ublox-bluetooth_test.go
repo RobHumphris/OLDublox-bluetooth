@@ -9,7 +9,7 @@ import (
 )
 
 func TestATCommand(t *testing.T) {
-	ub, err := u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	ub, err := u.NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}

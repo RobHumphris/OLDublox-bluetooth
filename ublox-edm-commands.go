@@ -64,10 +64,10 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 	data := removeNewlines(msg[2 : len(msg)-1])
 	switch msg[1] {
 	case StartEvent:
-		fmt.Print("0x71:")
+		//fmt.Print("0x71:")
 		ub.StartEventReceived = true
 	case ATConfirmation:
-		fmt.Print("0x45:")
+		//fmt.Print("0x45:")
 		switch data[0] {
 		case '+':
 			ub.DataChannel <- data
@@ -75,7 +75,7 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 			ub.handleGeneralMessage(data)
 		}
 	case ATEvent:
-		fmt.Print("0x41:")
+		//fmt.Print("0x41:")
 		// we check for disconnect events disconnectResponse
 		if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
 			ub.handleUnexpectedDisconnection()

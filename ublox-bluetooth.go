@@ -44,7 +44,6 @@ type UbloxBluetooth struct {
 	timeout            time.Duration
 	lastCommand        string
 	serialPort         *serial.SerialPort
-	commDevice         string
 	currentMode        ubloxMode
 	StartEventReceived bool
 	readChannel        chan []byte
@@ -59,8 +58,8 @@ type UbloxBluetooth struct {
 }
 
 // NewUbloxBluetooth creates a new UbloxBluetooth instance
-func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, error) {
-	sp, err := serial.OpenSerialPort(device, timeout)
+func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
+	sp, err := serial.OpenSerialPort(timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +74,6 @@ func NewUbloxBluetooth(device string, timeout time.Duration) (*UbloxBluetooth, e
 		timeout:            timeout,
 		lastCommand:        "",
 		serialPort:         sp,
-		commDevice:         device,
 		currentMode:        extendedDataMode,
 		StartEventReceived: false,
 		readChannel:        make(chan []byte),
@@ -129,12 +127,18 @@ func (ub *UbloxBluetooth) ResetSerial() error {
 	ub.stopScanning <- true
 	ub.serialPort.Close()
 
-	sp, err := serial.OpenSerialPort(ub.commDevice, ub.timeout)
+	sp, err := serial.OpenSerialPort(ub.timeout)
 	if err != nil {
 		return err
 	}
 
 	err = sp.Flush()
+	if err != nil {
+		sp.Close()
+		return err
+	}
+
+	err = sp.ResetViaDTR()
 	if err != nil {
 		sp.Close()
 		return err

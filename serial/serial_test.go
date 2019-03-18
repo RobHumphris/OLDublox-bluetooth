@@ -1,24 +1,31 @@
 package serial
 
 import (
-	"bufio"
-	"fmt"
-	"os"
 	"testing"
 	"time"
 )
 
 func TestSerial(t *testing.T) {
-	device := "/dev/ttyUSB0"
 	timeout := 5 * time.Second
-	readChannel := make(chan []byte)
-	sp, err := OpenSerialPort(device, timeout)
+	//readChannel := make(chan []byte)
+	sp, err := OpenSerialPort(timeout)
 	if err != nil {
 		t.Fatalf("Open Port Error %v\n", err)
 	}
 	sp.Flush()
 
-	go sp.ScanLines(readChannel)
+	err = sp.ToggleDTR()
+	if err != nil {
+		t.Fatalf("ToggleDTR error %v\n", err)
+	}
+
+	time.Sleep(timeout)
+
+	err = sp.Close()
+	if err != nil {
+		t.Fatalf("Close error %v\n", err)
+	}
+	/*go sp.ScanLines(readChannel)
 	go func() {
 		for {
 			s := <-readChannel
@@ -34,5 +41,5 @@ func TestSerial(t *testing.T) {
 		}
 	}()
 
-	select {}
+	select {}*/
 }

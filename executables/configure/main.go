@@ -10,24 +10,20 @@ import (
 	"github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
-const defaultSerialPort = "/dev/ttyUSB0"
-
 func main() {
 	reset := flag.Bool("reset", false, "Reset the device")
-	port := flag.String("port", defaultSerialPort, "Ublox serial port")
-	flag.Parse()
 
-	bt, err := ub.NewUbloxBluetooth(*port, 6*time.Second)
+	bt, err := ub.NewUbloxBluetooth(6 * time.Second)
 	if err != nil {
 		log.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
 	defer bt.Close()
 
 	if *reset {
-		fmt.Println("Resetting device on ", *port)
+		fmt.Println("Resetting device")
 		factoryReset(bt)
 	} else {
-		fmt.Println("Setting defaults on ", *port)
+		fmt.Println("Setting defaults")
 		defaultSettings(bt)
 	}
 }

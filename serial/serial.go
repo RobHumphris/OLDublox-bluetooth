@@ -46,9 +46,14 @@ const (
 	HighSpeed BaudRate = unix.B1000000
 )
 
-// OpenSerialPort opens the specified device with our default settings.
-func OpenSerialPort(devicename string, readTimeout time.Duration) (p *SerialPort, err error) {
-	f, err := os.OpenFile(devicename, unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0666)
+// OpenSerialPort opens the Ublox device with a timeout value
+func OpenSerialPort(readTimeout time.Duration) (p *SerialPort, err error) {
+	devPath, err := GetFTDIDevPath()
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.OpenFile(devPath, unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0666)
 	if err != nil {
 		return nil, err
 	}
@@ -220,20 +225,50 @@ func (sp *SerialPort) Flush() error {
 	return nil
 }
 
-// ToggleDTR sets and resets the DTR pin
-func (sp *SerialPort) ToggleDTR() error {
+func (sp *SerialPort) setDTR() error {
 	err := sp.ioctl(unix.TIOCMBIS, unix.TIOCM_DTR)
 	if err != nil {
 		return fmt.Errorf("[ToggleDTR] DTR set error: %d", err)
 	}
 	time.Sleep(10 * time.Millisecond)
+	return nil
+}
 
-	err = sp.ioctl(unix.TIOCMBIC, unix.TIOCM_DTR)
+func (sp *SerialPort) clearDTR() error {
+	err := sp.ioctl(unix.TIOCMBIC, unix.TIOCM_DTR)
 	if err != nil {
 		return fmt.Errorf("[ToggleDTR] DTR clear error: %d", err)
 	}
 	time.Sleep(10 * time.Millisecond)
+	return nil
+}
 
+// ToggleDTR sets and resets the DTR pin
+func (sp *SerialPort) ToggleDTR() error {
+	err := sp.setDTR()
+	if err != nil {
+		return err
+	}
+
+	err = sp.clearDTR()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ResetViaDTR sends the DTR line low and then takes it high
+// if the board has been setup with AT&D4 this will cause a reset.
+func (sp *SerialPort) ResetViaDTR() error {
+	err := sp.clearDTR()
+	if err != nil {
+		return err
+	}
+
+	err = sp.setDTR()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

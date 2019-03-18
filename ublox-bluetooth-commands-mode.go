@@ -48,3 +48,8 @@ func (ub *UbloxBluetooth) EnterCommandMode() error {
 	modeSwitchDelay()
 	return nil
 }
+
+// ResetUblox calls the Serial port's ResetViaDTR
+func (ub *UbloxBluetooth) ResetUblox() error {
+	return ub.serialPort.ResetViaDTR()
+}

@@ -14,3 +14,4 @@
 ublox-bluetooth
 executables/discover/discover
 executables/configure/configure
+executables/reset/reset

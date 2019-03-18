@@ -54,6 +54,24 @@ func TestSetWatchdog(t *testing.T) {
 	fmt.Println("ResetWatchdogConfiguration OK")
 }
 
+func TestRestViaDTR(t *testing.T) {
+	var err error
+	serial.SetVerbose(true)
+
+	bt, err = u.NewUbloxBluetooth("/dev/ttyUSB0", timeout)
+	if err != nil {
+		handleFatal("NewUbloxBluetooth error", err)
+	}
+	defer bt.Close()
+
+	bt.ResetUblox()
+
+	err = bt.ATCommand()
+	if err != nil {
+		handleFatal("AT - 0 error", err)
+	}
+}
+
 func TestRestart(t *testing.T) {
 	var err error
 	serial.SetVerbose(true)

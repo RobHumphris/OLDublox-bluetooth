@@ -34,6 +34,7 @@ type SerialPort struct {
 	fd               uintptr
 	extendedDataMode bool
 	contineScanning  bool
+	isOpen           bool
 }
 
 // BaudRate is a type used for enumerating the permissible rates in our system.
@@ -77,6 +78,7 @@ func OpenSerialPort(readTimeout time.Duration) (p *SerialPort, err error) {
 		fd:               fd,
 		extendedDataMode: true,
 		contineScanning:  true,
+		isOpen:           true,
 	}
 
 	sp.SetBaudRate(HighSpeed, readTimeout)
@@ -149,7 +151,11 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 			if err == io.EOF { // ignore EOFs we're going to get them all the time.
 				continue
 			} else {
-				errChan <- errors.Wrap(err, "serial read error")
+				if sp.isOpen {
+					errChan <- errors.Wrap(err, "serial read error")
+				} else {
+					fmt.Printf("[ScanPort] Read error %v\n", err)
+				}
 				break
 			}
 		}
@@ -274,5 +280,7 @@ func (sp *SerialPort) ResetViaDTR() error {
 
 // Close closes the file
 func (sp *SerialPort) Close() (err error) {
-	return sp.file.Close()
+	err = sp.file.Close()
+	sp.isOpen = false
+	return err
 }

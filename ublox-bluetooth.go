@@ -154,7 +154,10 @@ func (ub *UbloxBluetooth) ResetSerial() error {
 
 // Close shuts down the serial port, can closes communication channels.
 func (ub *UbloxBluetooth) Close() {
-	ub.serialPort.Close()
+	err := ub.serialPort.Close()
+	if err != nil {
+		fmt.Printf("[Close] error %v\n", err)
+	}
 
 	close(ub.readChannel)
 	close(ub.DataChannel)

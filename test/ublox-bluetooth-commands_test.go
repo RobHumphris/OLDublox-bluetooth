@@ -48,31 +48,6 @@ func TestAbort(t *testing.T) {
 		}
 	}
 
-	/*err = connectToDevice("D5926479C652r", func(t *testing.T) error {
-		defer ub.DisconnectFromDevice()
-		err = ub.EnableNotifications()
-		if err != nil {
-			t.Fatalf("EnableNotifications error %v\n", err)
-		}
-
-		info, err := ub.GetInfo()
-		if err != nil {
-			t.Fatalf("GetInfo error %v\n", err)
-		}
-
-		startingIndex := info.CurrentSequenceNumber - info.RecordsCount
-		abc := 0
-		err = ub.DownloadLogFile(startingIndex, func(b []byte) error {
-			abc++
-			if abc == 10 {
-				fmt.Print("Should Stop\n")
-				return ub.AbortEventLogRead()
-			}
-			return nil
-		})
-		return err
-	}, ub, t)*/
-
 	if err != nil {
 		t.Fatalf("TestAbort error %v\n", err)
 	}
@@ -100,14 +75,6 @@ func TestPagedDownloads(t *testing.T) {
 		}
 		fmt.Printf("[GetInfo] Current sequence number %d. Records count %d\n", info.CurrentSequenceNumber, info.RecordsCount)
 		serial.SetVerbose(true)
-		/*startingIndex := info.CurrentSequenceNumber - info.RecordsCount
-		err = ub.DownloadLogFile(startingIndex, func(b []byte) error {
-			//fmt.Print(".")
-			return nil
-		})
-		if err != nil {
-			t.Errorf("[DownloadLogFile] error: %v\n", err)
-		}*/
 		return err
 	}, ub, t)
 
@@ -179,10 +146,10 @@ func setupBluetooth() (*u.UbloxBluetooth, error) {
 		return nil, errors.Wrap(err, "NewUbloxBluetooth error")
 	}
 
-	err = ub.ConfigureUblox()
+	/*err = ub.ConfigureUblox()
 	if err != nil {
 		return nil, errors.Wrap(err, "ConfigureUblox error")
-	}
+	}*/
 
 	err = ub.RebootUblox()
 	if err != nil {

@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/RobHumphris/rf-gateway/global"
 	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
+	"github.com/google/martian/log"
 )
 
 func errorHandler(ub *u.UbloxBluetooth, t *testing.T) {
@@ -19,13 +19,13 @@ func errorHandler(ub *u.UbloxBluetooth, t *testing.T) {
 }
 
 func retryCall(fn func(*u.UbloxBluetooth, string) error, ub *u.UbloxBluetooth, mac string) (err error) {
-	for i := 0; i < global.RetryCount; i++ {
+	for i := 0; i < 3; i++ {
 		err := fn(ub, mac)
 		if err == nil {
 			return nil
 		}
-		global.Debugf("Call failed on device %s, retrying", mac)
-		time.Sleep(global.RetryWait)
+		log.Debugf("Call failed on device %s, retrying", mac)
+		time.Sleep(500 * time.Millisecond)
 		e := ub.ATCommand()
 		if e != nil {
 			// we cannot continue

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/RobHumphris/rf-gateway/global"
 	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 	retry "github.com/avast/retry-go"
@@ -57,8 +56,8 @@ func TestMultipleConnects(t *testing.T) {
 			}
 			return e
 		},
-			retry.Attempts(global.RetryCount),
-			retry.Delay(global.RetryWait))
+			retry.Attempts(3),
+			retry.Delay(500*time.Millisecond))
 
 		//doConnect(ub, "CE1A0B7E9D79r", t)
 		//doConnect(ub, "D8CFDFA118ECr", t)
@@ -70,7 +69,7 @@ func doConnect(ub *u.UbloxBluetooth, mac string, count int) error {
 	err := ub.ConnectToDevice(mac, func() error {
 		defer ub.DisconnectFromDevice()
 
-		time.Sleep(global.BluetoothPostConnectDelay)
+		time.Sleep(200 * time.Millisecond)
 
 		fmt.Print("N")
 		err := ub.EnableNotifications()

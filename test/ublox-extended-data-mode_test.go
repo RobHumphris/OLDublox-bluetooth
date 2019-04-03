@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/RobHumphris/rf-gateway/global"
 	u "github.com/RobHumphris/ublox-bluetooth"
 	retry "github.com/avast/retry-go"
 
@@ -33,8 +32,8 @@ func TestExtendedDataMode(t *testing.T) {
 		e := retry.Do(func() error {
 			return workflowTest("D5926479C652r", i, ub)
 		},
-			retry.Attempts(global.RetryCount),
-			retry.Delay(global.RetryWait))
+			retry.Attempts(3),
+			retry.Delay(500*time.Millisecond))
 		if e != nil {
 			err = errors.Wrapf(err, "workflowTest error %v", e)
 			t.Fatalf("\nWorkflow test error %v\n", err)

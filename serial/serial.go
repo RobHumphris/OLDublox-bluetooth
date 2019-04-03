@@ -61,7 +61,7 @@ func OpenSerialPort(readTimeout time.Duration) (p *SerialPort, err error) {
 
 	defer func() {
 		if err != nil && f != nil {
-			fmt.Printf("ERROR: %v\n", err)
+			fmt.Printf("[OpenSerialPort] ERROR: %v\n", err)
 			f.Close()
 		}
 	}()
@@ -70,7 +70,7 @@ func OpenSerialPort(readTimeout time.Duration) (p *SerialPort, err error) {
 
 	unix.SetNonblock(int(fd), false)
 	if err != nil {
-		return nil, fmt.Errorf("[OpenPort] set non block error: %v", err)
+		return nil, fmt.Errorf("[OpenSerialPort] set non block error: %v", err)
 	}
 
 	sp := &SerialPort{
@@ -199,7 +199,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 			}
 		}
 	}
-	fmt.Print("!")
+	fmt.Print("[ScanPort] CATASTROPHIC ERROR")
 }
 
 // Ioctl sends

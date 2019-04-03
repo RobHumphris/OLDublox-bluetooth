@@ -336,7 +336,6 @@ typedef struct
   } veh_slot_info_t;
 */ // NewSlotInfoReply returns a SlotInfoReply or error
 func NewSlotInfoReply(d []byte) (*SlotInfoReply, error) {
-	fmt.Printf("Length: %d\n", len(d))
 	t, err := splitOutResponse(d, readSlotInfoReply)
 	if err != nil {
 		return nil, err

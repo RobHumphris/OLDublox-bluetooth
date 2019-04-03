@@ -117,7 +117,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 				}
 			}
 		case _ = <-ub.stopScanning:
-			fmt.Println("A")
+			fmt.Println("StopScanning received")
 			ub.serialPort.StopScanning()
 			return
 		}
@@ -154,6 +154,7 @@ func (ub *UbloxBluetooth) ResetSerial() error {
 
 // Close shuts down the serial port, can closes communication channels.
 func (ub *UbloxBluetooth) Close() {
+	fmt.Println("### Closing Serial Port")
 	err := ub.serialPort.Close()
 	if err != nil {
 		fmt.Printf("[Close] error %v\n", err)

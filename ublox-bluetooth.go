@@ -115,10 +115,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 				if err != nil {
 					ub.ErrorChannel <- err
 				}
-			} else {
-				fmt.Println("Empty edm message received")
 			}
-
 		case _ = <-ub.stopScanning:
 			fmt.Println("A")
 			ub.serialPort.StopScanning()

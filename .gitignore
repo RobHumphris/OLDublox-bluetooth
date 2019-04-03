@@ -15,3 +15,4 @@ ublox-bluetooth
 executables/discover/discover
 executables/configure/configure
 executables/reset/reset
+executables/event-clear/event-clear

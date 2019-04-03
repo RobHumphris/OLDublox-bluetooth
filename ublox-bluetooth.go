@@ -171,6 +171,11 @@ func (ub *UbloxBluetooth) SetCommsRate(rate serial.BaudRate) error {
 	return ub.serialPort.SetBaudRate(rate, ub.timeout)
 }
 
+// SetSerialVerbose sets the debug flag
+func (ub *UbloxBluetooth) SetSerialVerbose(f bool) {
+	serial.SetVerbose(f)
+}
+
 // Write writes the data string to Ublox via the SerialPort
 func (ub *UbloxBluetooth) Write(data string) error {
 	var b []byte

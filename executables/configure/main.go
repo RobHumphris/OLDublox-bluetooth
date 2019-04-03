@@ -12,6 +12,7 @@ import (
 
 func main() {
 	reset := flag.Bool("reset", false, "Reset the device")
+	flag.Parse()
 
 	bt, err := ub.NewUbloxBluetooth(6 * time.Second)
 	if err != nil {

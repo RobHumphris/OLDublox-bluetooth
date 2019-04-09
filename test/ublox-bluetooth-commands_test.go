@@ -117,6 +117,41 @@ func TestEventClear(t *testing.T) {
 	}
 }
 
+func TestSlotDataClear(t *testing.T) {
+	ub, err := setupBluetooth()
+	if err != nil {
+		t.Fatalf("setupBluetooth error %v\n", err)
+	}
+	defer ub.Close()
+
+	err = connectToDevice("F344B0C992E1r", func(t *testing.T) error {
+		defer ub.DisconnectFromDevice()
+
+		startingCount, err := ub.ReadSlotCount()
+		if err != nil {
+			t.Fatalf("ReadSlotCount error %v\n", err)
+		}
+
+		err = ub.EraseSlotData()
+		if err != nil {
+			t.Fatalf("EraseSlotData error %v\n", err)
+		}
+
+		newCount, err := ub.ReadSlotCount()
+		if err != nil {
+			t.Fatalf("ReadSlotCount error %v\n", err)
+		}
+
+		fmt.Printf("Original count %d, count after erase %d\n", startingCount.Count, newCount.Count)
+
+		return err
+	}, ub, t)
+
+	if err != nil {
+		t.Errorf("TestSlotDataClear error %v\n", err)
+	}
+}
+
 func TestReboot(t *testing.T) {
 	ub, err := setupBluetooth()
 	if err != nil {

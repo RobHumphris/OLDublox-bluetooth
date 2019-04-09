@@ -7,20 +7,24 @@ import (
 	"github.com/pkg/errors"
 )
 
-var unlockCommand = []byte{0x00}
-var versionCommand = []byte{0x01}
-var infoCommand = []byte{0x02}
-var readConfigCommand = []byte{0x03}
-var writeConfigCommand = []byte{0x04}
-var readNameCommand = []byte{0x05}
-var writeNameCommand = []byte{0x06}
-var readEventLogCommand = []byte{0x07}
-var clearEventLogCommand = []byte{0x08}
-var abortCommand = []byte{0x09}
-var readSlotCountCommand = []byte{0x0E}
-var readSlotInfoCommand = []byte{0x0F}
-var readSlotDataCommand = []byte{0x10}
-var creditCommand = []byte{0x11}
+var (
+	unlockCommand        = []byte{0x00}
+	versionCommand       = []byte{0x01}
+	infoCommand          = []byte{0x02}
+	readConfigCommand    = []byte{0x03}
+	writeConfigCommand   = []byte{0x04}
+	readNameCommand      = []byte{0x05}
+	writeNameCommand     = []byte{0x06}
+	readEventLogCommand  = []byte{0x07}
+	clearEventLogCommand = []byte{0x08}
+	abortCommand         = []byte{0x09}
+	readSlotCountCommand = []byte{0x0E}
+	readSlotInfoCommand  = []byte{0x0F}
+	readSlotDataCommand  = []byte{0x10}
+	creditCommand        = []byte{0x11}
+	eraseSlotCommand     = []byte{0x12}
+	rebootCommand        = []byte{0x13}
+)
 
 // UnlockDevice attempts to unlock the device with the password provided.
 func (ub *UbloxBluetooth) UnlockDevice(password []byte) (bool, error) {
@@ -241,4 +245,17 @@ func (ub *UbloxBluetooth) ReadSlotInfo(slotNumber int) (*SlotInfoReply, error) {
 		return nil, err
 	}
 	return NewSlotInfoReply(d)
+}
+
+// EraseSlotData requests that the device erases its slots...
+func (ub *UbloxBluetooth) EraseSlotData() error {
+	if ub.connectedDevice == nil {
+		return fmt.Errorf("ConnectionReply is nil")
+	}
+
+	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, eraseSlotCommand), true)
+	if err != nil {
+		return errors.Wrap(err, "EraseSlotData error")
+	}
+	return ProcessEraseSlotDataReply(d)
 }

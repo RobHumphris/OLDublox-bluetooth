@@ -27,6 +27,7 @@ const clearEventLogReply = "08"
 const readSlotCountReply = "0E"
 const readSlotInfoReply = "0F"
 const readSlotDataReply = "10"
+const eraseSlotDataReply = "12"
 
 var readSlotDataReplyBytes = []byte(readSlotDataReply)
 var readEventLogReplyBytes = []byte(readEventLogReply)
@@ -428,6 +429,12 @@ func ProcessEventsReply(d []byte, reply string) (int, error) {
 // ProcessClearEventReply checks the response and raises an error if things do not behave as they should.
 func ProcessClearEventReply(d []byte) error {
 	_, err := splitOutResponse(d, clearEventLogReply)
+	return err
+}
+
+// ProcessEraseSlotDataReply check the passed response bytes.
+func ProcessEraseSlotDataReply(d []byte) error {
+	_, err := splitOutResponse(d, eraseSlotDataReply)
 	return err
 }
 

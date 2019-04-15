@@ -45,6 +45,7 @@ func (ub *UbloxBluetooth) EnterCommandMode() error {
 		return errors.Wrap(err, "[EnterCommandMode] error")
 	}
 	ub.currentMode = commandMode
+	ub.serialPort.SetEDMFlag(false)
 	modeSwitchDelay()
 	return nil
 }

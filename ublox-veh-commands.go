@@ -86,13 +86,9 @@ func (ub *UbloxBluetooth) WriteConfig(cfg *ConfigReply) error {
 		return fmt.Errorf("ConnectionReply is nil")
 	}
 
-	configData, err := cfg.ByteArray()
-	if err != nil {
-		return err
-	}
-
-	_, err = ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, writeConfigCommand, configData), true)
-	return fmt.Errorf("NOT IMPLEMENTED")
+	configData := cfg.ByteArray()
+	_, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, writeConfigCommand, configData), true)
+	return err
 }
 
 // ReadName messages the remote device to get its set name

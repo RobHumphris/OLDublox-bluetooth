@@ -28,8 +28,9 @@ type ConnectionReply struct {
 
 // VersionReply VEH sensor version structure
 type VersionReply struct {
-	SoftwareVersion int
-	HardwareVersion int
+	SoftwareVersion string
+	HardwareVersion string
+	ReleaseFlag     string
 }
 
 // InfoReply sensor info (time, sequence, & count) structure

@@ -67,7 +67,7 @@ func accessDeviceFn(ub *u.UbloxBluetooth, deviceAddr string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Software Version: %d Hardware Version: %d", version.SoftwareVersion, version.HardwareVersion)
+		fmt.Printf("Software Version: %s Hardware Version: %s", version.SoftwareVersion, version.HardwareVersion)
 
 		info, err := ub.GetInfo()
 		if err != nil {

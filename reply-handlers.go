@@ -76,6 +76,8 @@ func splitOutNotification(d []byte, command string) ([]byte, error) {
 func stringToInt(s string) int {
 	b, _ := hex.DecodeString(s)
 	switch len(b) {
+	case 1:
+		return int(b[0])
 	case 2:
 		return int(binary.LittleEndian.Uint16(b))
 	case 4:
@@ -269,8 +271,9 @@ func NewVersionReply(d []byte) (*VersionReply, error) {
 	}
 
 	return &VersionReply{
-		SoftwareVersion: stringToInt(t[4:8]),
-		HardwareVersion: stringToInt(t[8:12]),
+		SoftwareVersion: fmt.Sprintf("%d.%d", stringToInt(t[4:6]), stringToInt(t[6:8])),
+		HardwareVersion: fmt.Sprintf("%d", stringToInt(t[8:10])),
+		ReleaseFlag:     fmt.Sprintf("%d", stringToInt(t[10:12])),
 	}, nil
 }
 
@@ -298,15 +301,22 @@ func NewConfigReply(d []byte) (*ConfigReply, error) {
 		AdvertisingInterval: stringToInt(t[4:8]),
 		SampleTime:          stringToInt(t[8:12]),
 		State:               stringToInt(t[12:16]),
-		AccelSettings:       stringToInt(t[16:18]),
-		SpareOne:            stringToInt(t[18:20]),
-		TemperatureOffset:   stringToInt(t[20:22]),
+		AccelSettings:       stringToInt(t[16:20]),
+		SpareOne:            stringToInt(t[20:24]),
+		TemperatureOffset:   stringToInt(t[24:28]),
 	}, nil
 }
 
-func (cr *ConfigReply) ByteArray() (string, error) {
-	a := ""
-	return a, nil
+// ByteArray turns the `ConfigReply` to hex bytes
+func (cr *ConfigReply) ByteArray() string {
+	a := fmt.Sprintf("%s%s%s%s%s%s",
+		uint16ToString(uint16(cr.AdvertisingInterval)),
+		uint16ToString(uint16(cr.SampleTime)),
+		uint16ToString(uint16(cr.State)),
+		uint16ToString(uint16(cr.AccelSettings)),
+		uint16ToString(uint16(cr.SpareOne)),
+		uint16ToString(uint16(cr.TemperatureOffset)))
+	return a
 }
 
 // NewSlotCountReply returns a SlotCountReply

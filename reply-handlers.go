@@ -73,6 +73,11 @@ func splitOutNotification(d []byte, command string) ([]byte, error) {
 	return nil, fmt.Errorf("invalid response")
 }
 
+func stringToHexString(s string) string {
+	b, _ := hex.DecodeString(s)
+	return string(b)
+}
+
 func stringToInt(s string) int {
 	b, _ := hex.DecodeString(s)
 	switch len(b) {
@@ -317,6 +322,17 @@ func (cr *ConfigReply) ByteArray() string {
 		uint16ToString(uint16(cr.SpareOne)),
 		uint16ToString(uint16(cr.TemperatureOffset)))
 	return a
+}
+
+// NewNameReply returns the string value from the bytes in the response
+func NewNameReply(d []byte) (string, error) {
+	t, err := splitOutResponse(d, readNameReply)
+	if err != nil {
+		return "ERROR", err
+	}
+
+	name, err := hex.DecodeString(string(t[4:]))
+	return string(name), err
 }
 
 // NewSlotCountReply returns a SlotCountReply

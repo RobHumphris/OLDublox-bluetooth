@@ -103,17 +103,17 @@ func (ub *UbloxBluetooth) ReadName() (string, error) {
 		return name, errors.Wrapf(err, "readNameCommand error")
 	}
 
-	name = string(d)
-
-	return name, nil
+	return NewNameReply(d)
 }
 
 // WriteName sets the device's name
 func (ub *UbloxBluetooth) WriteName(name string) error {
+	stringBytes := fmt.Sprintf("%x", name)
+
 	if ub.connectedDevice == nil {
 		return fmt.Errorf("ConnectionReply is nil")
 	}
-	_, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, writeNameCommand, name), true)
+	_, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, writeNameCommand, stringBytes), true)
 	if err != nil {
 		return errors.Wrapf(err, "writeNameCommand error")
 	}

@@ -126,6 +126,7 @@ func TestMulipleAccesses(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		fmt.Printf("Starting Access test %d\n", i)
+		t.Fatalf("NEED MORE v2.0 sensors")
 		accessDevice(ub, "C1851F6083F8r")
 		accessDevice(ub, "CE1A0B7E9D79r")
 		accessDevice(ub, "D8CFDFA118ECr")

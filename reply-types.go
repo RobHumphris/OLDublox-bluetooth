@@ -43,12 +43,6 @@ type ConfigReply struct {
 	TemperatureOffset   int
 }
 
-// SlotCountReply holds the slot data
-type SlotCountReply struct {
-	Count    int
-	rawCount string
-}
-
 // SlotInfoReply holds the current data returned for Info
 type SlotInfoReply struct {
 	Time           int

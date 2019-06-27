@@ -315,29 +315,6 @@ func (cr *ConfigReply) ByteArray() string {
 	return a
 }
 
-// NewNameReply returns the string value from the bytes in the response
-func NewNameReply(d []byte) (string, error) {
-	t, err := splitOutResponse(d, readNameReply)
-	if err != nil {
-		return "ERROR", err
-	}
-
-	name, err := hex.DecodeString(string(t[4:]))
-	return string(name), err
-}
-
-// NewSlotCountReply returns a SlotCountReply
-func NewSlotCountReply(d []byte) (*SlotCountReply, error) {
-	t, err := splitOutResponse(d, readSlotCountReply)
-	if err != nil {
-		return nil, err
-	}
-	return &SlotCountReply{
-		Count:    stringToInt(t[4:8]),
-		rawCount: t[4:8],
-	}, nil
-}
-
 /*
 typedef struct
 {

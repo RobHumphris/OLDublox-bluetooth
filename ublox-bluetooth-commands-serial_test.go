@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	serial "github.com/RobHumphris/ublox-bluetooth/serial"
+	serial "github.com/8power/ublox-bluetooth/serial"
 )
 
 func setupForSerialTests(t *testing.T, echoOff bool) (*UbloxBluetooth, error) {

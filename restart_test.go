@@ -5,7 +5,7 @@ import (
 	"log"
 	"testing"
 
-	serial "github.com/RobHumphris/ublox-bluetooth/serial"
+	serial "github.com/8power/ublox-bluetooth/serial"
 )
 
 var bt *UbloxBluetooth

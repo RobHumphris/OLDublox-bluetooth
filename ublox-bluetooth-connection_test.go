@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	serial "github.com/RobHumphris/ublox-bluetooth/serial"
+	serial "github.com/8power/ublox-bluetooth/serial"
 	retry "github.com/avast/retry-go"
 	"github.com/pkg/errors"
 )

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RobHumphris/ublox-bluetooth/serial"
+	"github.com/8power/ublox-bluetooth/serial"
 )
 
 // DataResponse holds the Token at the start of the reply, and the subsequent data bytes

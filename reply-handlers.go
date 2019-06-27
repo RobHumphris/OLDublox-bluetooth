@@ -29,6 +29,11 @@ const readSlotInfoReply = "0F"
 const readSlotDataReply = "10"
 const eraseSlotDataReply = "12"
 
+const readRecorderInfoReply = "20"
+const readRecorderReply = "21"
+const queryRecorderMetaDataReply = "22"
+const readRecorderDataReply = "23"
+
 var readSlotDataReplyBytes = []byte(readSlotDataReply)
 var readEventLogReplyBytes = []byte(readEventLogReply)
 
@@ -282,20 +287,6 @@ func NewVersionReply(d []byte) (*VersionReply, error) {
 	}, nil
 }
 
-// NewInfoReply returns an InfoReply if the bytes are right, or an error if they're not
-func NewInfoReply(d []byte) (*InfoReply, error) {
-	t, err := splitOutResponse(d, infoReply)
-	if err != nil {
-		return nil, err
-	}
-
-	return &InfoReply{
-		CurrentTime:           stringToInt(t[4:12]),
-		CurrentSequenceNumber: stringToInt(t[12:16]),
-		RecordsCount:          stringToInt(t[16:20]),
-	}, nil
-}
-
 // NewConfigReply returns a ConfigReply if the bytes are all present and correct, if not... an Error!
 func NewConfigReply(d []byte) (*ConfigReply, error) {
 	t, err := splitOutResponse(d, readConfigReply)
@@ -491,4 +482,40 @@ func ProcessRSSIReply(d []byte) (string, error) {
 		return "??", fmt.Errorf("get RSSI error %q", d)
 	}
 	return string(b[1]), nil
+}
+
+// ProcessReadRecorderInfoReply - breaks down the response to extract RecorderInfo
+func ProcessReadRecorderInfoReply(d []byte) (*RecorderInfoReply, error) {
+	_, err := splitOutResponse(d, readRecorderInfoReply)
+	if err != nil {
+		return nil, err
+	}
+	return nil, fmt.Errorf("NOT IMPLEMENTED")
+}
+
+// ProcessReadRecorderReply - breaks down the response and
+func ProcessReadRecorderReply(d []byte) (string, error) {
+	t, err := splitOutResponse(d, readRecorderReply)
+	if err != nil {
+		return "nil", err
+	}
+	return t, fmt.Errorf("NOT IMPLEMENTED")
+}
+
+// ProcessQueryRecorderMetaDataReply - a
+func ProcessQueryRecorderMetaDataReply(d []byte) (string, error) {
+	t, err := splitOutResponse(d, queryRecorderMetaDataReply)
+	if err != nil {
+		return "nil", err
+	}
+	return t, fmt.Errorf("NOT IMPLEMENTED")
+}
+
+// ProcessReadRecorderDataReply - b
+func ProcessReadRecorderDataReply(d []byte) (string, error) {
+	t, err := splitOutResponse(d, readRecorderDataReply)
+	if err != nil {
+		return "nil", err
+	}
+	return t, fmt.Errorf("NOT IMPLEMENTED")
 }

@@ -33,13 +33,6 @@ type VersionReply struct {
 	ReleaseFlag     string
 }
 
-// InfoReply sensor info (time, sequence, & count) structure
-type InfoReply struct {
-	CurrentTime           int
-	CurrentSequenceNumber int
-	RecordsCount          int
-}
-
 // ConfigReply sensor conf structure
 type ConfigReply struct {
 	AdvertisingInterval int
@@ -81,3 +74,5 @@ type ACLConnected struct {
 	Type       int
 	MacAddress string
 }
+
+type RecorderInfoReply struct{}

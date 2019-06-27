@@ -5,12 +5,11 @@ import (
 	"testing"
 	"time"
 
-	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 	"github.com/google/martian/log"
 )
 
-func errorHandler(ub *u.UbloxBluetooth, t *testing.T) {
+func errorHandler(ub *UbloxBluetooth, t *testing.T) {
 	err := ub.ATCommand()
 	if err != nil {
 		t.Fatalf("ATCommand error %v\n", err)
@@ -18,7 +17,7 @@ func errorHandler(ub *u.UbloxBluetooth, t *testing.T) {
 	fmt.Printf("AT Sent Okay")
 }
 
-func retryCall(fn func(*u.UbloxBluetooth, string) error, ub *u.UbloxBluetooth, mac string) (err error) {
+func retryCall(fn func(*UbloxBluetooth, string) error, ub *UbloxBluetooth, mac string) (err error) {
 	for i := 0; i < 3; i++ {
 		err := fn(ub, mac)
 		if err == nil {
@@ -35,12 +34,12 @@ func retryCall(fn func(*u.UbloxBluetooth, string) error, ub *u.UbloxBluetooth, m
 	return err
 }
 
-func accessDevice(ub *u.UbloxBluetooth, mac string) error {
+func accessDevice(ub *UbloxBluetooth, mac string) error {
 	err := retryCall(accessDeviceFn, ub, mac)
 	return err
 }
 
-func accessDeviceFn(ub *u.UbloxBluetooth, deviceAddr string) error {
+func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
 	return ub.ConnectToDevice(deviceAddr, func() error {
 		defer ub.DisconnectFromDevice()
 
@@ -69,11 +68,11 @@ func accessDeviceFn(ub *u.UbloxBluetooth, deviceAddr string) error {
 		}
 		fmt.Printf("Software Version: %s Hardware Version: %s", version.SoftwareVersion, version.HardwareVersion)
 
-		info, err := ub.GetInfo()
+		info, err := ub.GetTime()
 		if err != nil {
 			return err
 		}
-		fmt.Printf("[GetInfo] replied with: %v\n", info)
+		fmt.Printf("[GetTime] replied with: %v\n", info)
 
 		config, err := ub.ReadConfig()
 		if err != nil {
@@ -83,13 +82,13 @@ func accessDeviceFn(ub *u.UbloxBluetooth, deviceAddr string) error {
 
 		return nil
 	}, func() error {
-		return fmt.Errorf("Disconnected!")
+		return fmt.Errorf("disconnected")
 	})
 }
 
 func TestSingleAccess(t *testing.T) {
 	serial.SetVerbose(true)
-	ub, err := u.NewUbloxBluetooth(timeout)
+	ub, err := NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -105,11 +104,11 @@ func TestSingleAccess(t *testing.T) {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	accessDevice(ub, "D5926479C652r")
+	accessDevice(ub, "EE9EF8BA058Br")
 }
 
 func TestMulipleAccesses(t *testing.T) {
-	ub, err := u.NewUbloxBluetooth(timeout)
+	ub, err := NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}

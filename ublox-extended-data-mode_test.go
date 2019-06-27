@@ -5,14 +5,13 @@ import (
 	"testing"
 	"time"
 
-	u "github.com/RobHumphris/ublox-bluetooth"
 	retry "github.com/avast/retry-go"
 
 	"github.com/pkg/errors"
 )
 
 func TestExtendedDataMode(t *testing.T) {
-	ub, err := u.NewUbloxBluetooth(timeout)
+	ub, err := NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -46,7 +45,7 @@ func TestExtendedDataMode(t *testing.T) {
 	}
 }
 
-func workflowTest(mac string, itteration int, ub *u.UbloxBluetooth) error {
+func workflowTest(mac string, itteration int, ub *UbloxBluetooth) error {
 	err := ub.ConnectToDevice(mac,
 		func() error {
 			fmt.Printf("Workflow Test run: %d\n", itteration)

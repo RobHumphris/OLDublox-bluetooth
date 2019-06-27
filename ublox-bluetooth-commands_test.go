@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 	"github.com/pkg/errors"
 )
@@ -24,9 +23,7 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 
 	serial.SetVerbose(true)
 	for i := 0; i < 1; i++ {
-		//exerciseTheDevice("CE1A0B7E9D79r", ub, t, i, true, false)
 		exerciseTheDevice("D5926479C652r", ub, t, i, true, false)
-		//exerciseTheDevice("C1851F6083F8r", ub, t, i, true, false)
 	}
 }
 
@@ -69,11 +66,11 @@ func TestPagedDownloads(t *testing.T) {
 			t.Fatalf("EnableNotifications error %v\n", err)
 		}
 
-		info, err := ub.GetInfo()
+		time, err := ub.GetTime()
 		if err != nil {
-			t.Errorf("GetInfo error %v\n", err)
+			t.Errorf("GetTime error %v\n", err)
 		}
-		fmt.Printf("[GetInfo] Current sequence number %d. Records count %d\n", info.CurrentSequenceNumber, info.RecordsCount)
+		fmt.Printf("[GetTime] Current timestamp %d\n", time)
 		serial.SetVerbose(true)
 		return err
 	}, ub, t)
@@ -93,22 +90,18 @@ func TestEventClear(t *testing.T) {
 	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
 		defer ub.DisconnectFromDevice()
 
-		info, err := ub.GetInfo()
+		t.Fatalf("TODO - rework")
+
+		time, err := ub.GetTime()
 		if err != nil {
 			t.Errorf("GetInfo error %v\n", err)
 		}
-		fmt.Printf("[GetInfo] Current sequence number %d. Records count %d\n", info.CurrentSequenceNumber, info.RecordsCount)
+		fmt.Printf("[GetInfo] Current timestamp %d\n", time)
 
-		err = ub.ClearEventLog()
+		/*err = ub.ClearEventLog()
 		if err != nil {
 			t.Fatalf("ClearEventLog error %v\n", err)
-		}
-
-		info, err = ub.GetInfo()
-		if err != nil {
-			t.Errorf("GetInfo error %v\n", err)
-		}
-		fmt.Printf("[GetInfo] Current sequence number %d. Records count %d\n", info.CurrentSequenceNumber, info.RecordsCount)
+		}*/
 		return err
 	}, ub, t)
 
@@ -175,8 +168,8 @@ func TestReboot(t *testing.T) {
 	fmt.Printf("Rebooted")
 }
 
-func setupBluetooth() (*u.UbloxBluetooth, error) {
-	ub, err := u.NewUbloxBluetooth(timeout)
+func setupBluetooth() (*UbloxBluetooth, error) {
+	ub, err := NewUbloxBluetooth(timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "NewUbloxBluetooth error")
 	}
@@ -211,7 +204,7 @@ func setupBluetooth() (*u.UbloxBluetooth, error) {
 
 type TestFunc func(*testing.T) error
 
-func connectToDevice(mac string, tfn TestFunc, ub *u.UbloxBluetooth, t *testing.T) error {
+func connectToDevice(mac string, tfn TestFunc, ub *UbloxBluetooth, t *testing.T) error {
 	return ub.ConnectToDevice(mac, func() error {
 		err := ub.EnableNotifications()
 		if err != nil {
@@ -238,14 +231,14 @@ func connectToDevice(mac string, tfn TestFunc, ub *u.UbloxBluetooth, t *testing.
 	})
 }
 
-func exerciseTheDevice(deviceAddr string, ub *u.UbloxBluetooth, t *testing.T, itteration int, downloadEvents bool, downloadSlotData bool) {
+func exerciseTheDevice(deviceAddr string, ub *UbloxBluetooth, t *testing.T, itteration int, downloadEvents bool, downloadSlotData bool) {
 	err := connectToDevice(deviceAddr, func(t *testing.T) error {
-		fmt.Printf("[GetInfo] starting\n")
-		info, err := ub.GetInfo()
+		fmt.Printf("[GetTime] starting\n")
+		time, err := ub.GetTime()
 		if err != nil {
-			t.Errorf("GetInfo error %v\n", err)
+			t.Errorf("GetTime error %v\n", err)
 		}
-		fmt.Printf("[GetInfo] replied with: %v\n", info)
+		fmt.Printf("[GetTime] Current timestamp %d\n", time)
 
 		version, err := ub.GetVersion()
 		if err != nil {

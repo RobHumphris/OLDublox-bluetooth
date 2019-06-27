@@ -10,7 +10,7 @@ import (
 var (
 	unlockCommand        = []byte{0x00}
 	versionCommand       = []byte{0x01}
-	infoCommand          = []byte{0x02}
+	getTimeCommand       = []byte{0x02}
 	readConfigCommand    = []byte{0x03}
 	writeConfigCommand   = []byte{0x04}
 	readNameCommand      = []byte{0x05}
@@ -24,6 +24,12 @@ var (
 	creditCommand        = []byte{0x11}
 	eraseSlotCommand     = []byte{0x12}
 	rebootCommand        = []byte{0x13}
+
+	// Version 2 commands
+	recorderInfo          = []byte{0x20}
+	readRecorder          = []byte{0x21}
+	queryRecorderMetaData = []byte{0x22}
+	readRecorderData      = []byte{0x23}
 )
 
 // UnlockDevice attempts to unlock the device with the password provided.
@@ -53,18 +59,23 @@ func (ub *UbloxBluetooth) GetVersion() (*VersionReply, error) {
 	return NewVersionReply(d)
 }
 
-// GetInfo requests the current device info.
-func (ub *UbloxBluetooth) GetInfo() (*InfoReply, error) {
+// GetTime requests the current device info.
+func (ub *UbloxBluetooth) GetTime() (int, error) {
 	if ub.connectedDevice == nil {
-		return nil, fmt.Errorf("ConnectionReply is nil")
+		return -1, fmt.Errorf("ConnectionReply is nil")
 	}
 
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, infoCommand), true)
+	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, getTimeCommand), true)
 	if err != nil {
-		return nil, errors.Wrapf(err, "GetInfo error")
+		return -1, errors.Wrapf(err, "GetInfo error")
 	}
 
-	return NewInfoReply(d)
+	t, err := splitOutResponse(d, infoReply)
+	if err != nil {
+		return -1, err
+	}
+
+	return stringToInt(t[4:12]), nil
 }
 
 // ReadConfig requests the device's current config
@@ -254,4 +265,16 @@ func (ub *UbloxBluetooth) EraseSlotData() error {
 		return errors.Wrap(err, "EraseSlotData error")
 	}
 	return ProcessEraseSlotDataReply(d)
+}
+
+func (ub *UbloxBluetooth) ReadRecorderInfo() (*RecorderInfoReply, error) {
+	if ub.connectedDevice == nil {
+		return nil, fmt.Errorf("ConnectionReply is nil")
+	}
+
+	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, recorderInfo), true)
+	if err != nil {
+		return nil, errors.Wrap(err, "RecorderInfo error")
+	}
+	return ProcessReadRecorderInfoReply(d)
 }

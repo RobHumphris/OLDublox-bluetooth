@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 	retry "github.com/avast/retry-go"
 	"github.com/pkg/errors"
@@ -13,7 +12,7 @@ import (
 
 func TestMultipleConnects(t *testing.T) {
 	serial.SetVerbose(true)
-	ub, err := u.NewUbloxBluetooth(timeout)
+	ub, err := NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -49,8 +48,7 @@ func TestMultipleConnects(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		err = retry.Do(func() error {
 			fmt.Printf("%03d ", i)
-			//e := doConnect(ub, "C1851F6083F8r", i)
-			e := doConnect(ub, "CE1A0B7E9D79r", i)
+			e := doConnect(ub, "EE9EF8BA058Br", i)
 			if e != nil {
 				fmt.Printf("doConnect error %v", err)
 			}
@@ -58,13 +56,10 @@ func TestMultipleConnects(t *testing.T) {
 		},
 			retry.Attempts(3),
 			retry.Delay(500*time.Millisecond))
-
-		//doConnect(ub, "CE1A0B7E9D79r", t)
-		//doConnect(ub, "D8CFDFA118ECr", t)
 	}
 }
 
-func doConnect(ub *u.UbloxBluetooth, mac string, count int) error {
+func doConnect(ub *UbloxBluetooth, mac string, count int) error {
 	fmt.Print("C")
 	err := ub.ConnectToDevice(mac, func() error {
 		defer ub.DisconnectFromDevice()

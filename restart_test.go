@@ -5,11 +5,10 @@ import (
 	"log"
 	"testing"
 
-	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
-var bt *u.UbloxBluetooth
+var bt *UbloxBluetooth
 
 func handleFatal(s string, err error) {
 	bt.Close()
@@ -17,7 +16,7 @@ func handleFatal(s string, err error) {
 }
 
 func TestResetWatchdog(t *testing.T) {
-	bt, err := u.NewUbloxBluetooth(timeout)
+	bt, err := NewUbloxBluetooth(timeout)
 	if err != nil {
 		handleFatal("NewUbloxBluetooth error", err)
 	}
@@ -36,7 +35,7 @@ func TestResetWatchdog(t *testing.T) {
 }
 
 func TestSetWatchdog(t *testing.T) {
-	bt, err := u.NewUbloxBluetooth(timeout)
+	bt, err := NewUbloxBluetooth(timeout)
 	if err != nil {
 		handleFatal("NewUbloxBluetooth error", err)
 	}
@@ -58,7 +57,7 @@ func TestRestViaDTR(t *testing.T) {
 	var err error
 	serial.SetVerbose(true)
 
-	bt, err = u.NewUbloxBluetooth(timeout)
+	bt, err = NewUbloxBluetooth(timeout)
 	if err != nil {
 		handleFatal("NewUbloxBluetooth error", err)
 	}
@@ -76,7 +75,7 @@ func TestRestart(t *testing.T) {
 	var err error
 	serial.SetVerbose(true)
 
-	bt, err = u.NewUbloxBluetooth(timeout)
+	bt, err = NewUbloxBluetooth(timeout)
 	if err != nil {
 		handleFatal("NewUbloxBluetooth error", err)
 	}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	u "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
@@ -21,7 +20,7 @@ func TestRSSICommand(t *testing.T) {
 	doRSSITest("C1851F6083F8r", ub, t)
 }
 
-func doRSSITest(address string, ub *u.UbloxBluetooth, t *testing.T) {
+func doRSSITest(address string, ub *UbloxBluetooth, t *testing.T) {
 	rssi, err := ub.GetDeviceRSSI(address)
 	if err != nil {
 		t.Errorf("GetDeviceRSSI %s error %v\n", address, err)

@@ -5,12 +5,11 @@ import (
 	"testing"
 	"time"
 
-	ub "github.com/RobHumphris/ublox-bluetooth"
 	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
-func setupForSerialTests(t *testing.T, echoOff bool) (*ub.UbloxBluetooth, error) {
-	ub, err := ub.NewUbloxBluetooth(timeout)
+func setupForSerialTests(t *testing.T, echoOff bool) (*UbloxBluetooth, error) {
+	ub, err := NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}

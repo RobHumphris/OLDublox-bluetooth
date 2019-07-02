@@ -21,10 +21,11 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 	}
 	defer ub.Close()
 
-	serial.SetVerbose(true)
+	//serial.SetVerbose(true)
 
-	err = connectToDevice("EE9EF8BA058Br", func(t *testing.T) error {
-		fmt.Printf("[GetTime] starting\n")
+	// "CE1A0B7E9D79r" "EE9EF8BA058Br"
+	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
+		/*fmt.Printf("[GetTime] starting\n")
 		time, err := ub.GetTime()
 		if err != nil {
 			t.Errorf("GetTime error %v\n", err)
@@ -47,38 +48,41 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		}
 		fmt.Printf("[ReadConfig] replied with: %v\n", config)
 
-		/*if downloadEvents {
-			startingIndex := info.CurrentSequenceNumber - info.RecordsCount
-			fmt.Printf("[DownloadLogFile] starting run: %d\n", itteration)
-			err = ub.DownloadLogFile(startingIndex, func(b []byte) error {
-				//fmt.Print(".")
-				return nil
-			})
+		echo, err := ub.EchoCommand("012345678901234567890123456789012345678901234567890123456789")
+		if err != nil {
+			t.Fatalf("EchoCommand error %v\n", err)
+		}
+		fmt.Printf("[EchoCommand] replied with: %v\n", echo)*/
+
+		info, err := ub.ReadRecorderInfo()
+		if err != nil {
+			t.Fatalf("ReadRecorderInfo error %v\n", err)
+		}
+		fmt.Printf("[ReadRecorderInfo] replied with: %v\n", info)
+
+		rr, err := ub.ReadRecorder(info.SequenceNo - info.Count)
+		if err != nil {
+			t.Errorf("ReadRecorder error %v\n", err)
+		}
+		fmt.Printf("[ReadRecorderInfo] downloaded %d events\n", len(rr.Events))
+		fmt.Printf("[ReadRecorderInfo] has %d data sequences to download\n", len(rr.DataEventSequences))
+
+		//for _, i := range rr.DataEventSequences {
+		i := rr.DataEventSequences[0]
+		md, err := ub.QueryRecorderMetaDataCommand(i)
+		if err != nil {
+			fmt.Printf("[QueryRecorderMetaDataCommand] error: %v\n", err)
+		}
+		fmt.Printf("QueryRecorderMetaDataCommand Sequence: %d -> %v\n", i, md)
+		if md.Valid {
+			b, err := ub.ReadRecorderDataCommand(i, md)
 			if err != nil {
-				t.Fatalf("DownloadLogFile error %v\n", err)
+				fmt.Printf("[ReadRecorderDataCommand] error: %v\n", err)
 			}
-			fmt.Printf("[DownloadLogFile] complete\n")
+			fmt.Printf("[ReadRecorderDataCommand] sequence %d received %d bytes (expected %d)\n", i, len(b), md.Length)
 		}
 
-		if downloadSlotData {
-			slotCount, err := ub.ReadSlotCount()
-			if err != nil {
-				t.Errorf("ReadSlotCount error %v\n", err)
-			} else {
-				fmt.Printf("[ReadSlotCount] replied with: %v\n", slotCount)
-				slotInfo, err := ub.ReadSlotInfo(0)
-				if err != nil {
-					t.Errorf("ReadSlotInfo error %v\n", err)
-				} else {
-					fmt.Printf("[ReadSlotInfo] replied with: %v\n", slotInfo)
-					slotData, err := ub.ReadSlotData(0, 0, slotInfo.Bytes)
-					if err != nil {
-						t.Errorf("ReadSlotData error %v\n", err)
-					}
-					fmt.Printf("[ReadSlotData] replied with: %v\n", slotData)
-				}
-			}
-		}*/
+		//}
 
 		err = ub.DisconnectFromDevice()
 		if err != nil {
@@ -119,71 +123,6 @@ func TestPagedDownloads(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("TestPagedDownloads error %v\n", err)
-	}
-}
-
-func TestEventClear(t *testing.T) {
-	ub, err := setupBluetooth()
-	if err != nil {
-		t.Fatalf("setupBluetooth error %v\n", err)
-	}
-	defer ub.Close()
-
-	err = connectToDevice("EE9EF8BA058Br", func(t *testing.T) error {
-		defer ub.DisconnectFromDevice()
-
-		t.Fatalf("TODO - rework")
-
-		time, err := ub.GetTime()
-		if err != nil {
-			t.Errorf("GetInfo error %v\n", err)
-		}
-		fmt.Printf("[GetInfo] Current timestamp %d\n", time)
-
-		/*err = ub.ClearEventLog()
-		if err != nil {
-			t.Fatalf("ClearEventLog error %v\n", err)
-		}*/
-		return err
-	}, ub, t)
-
-	if err != nil {
-		t.Errorf("TestEventClear error %v\n", err)
-	}
-}
-
-func TestSlotDataClear(t *testing.T) {
-	ub, err := setupBluetooth()
-	if err != nil {
-		t.Fatalf("setupBluetooth error %v\n", err)
-	}
-	defer ub.Close()
-
-	err = connectToDevice("EE9EF8BA058Br", func(t *testing.T) error {
-		defer ub.DisconnectFromDevice()
-
-		startingCount, err := ub.ReadSlotCount()
-		if err != nil {
-			t.Fatalf("ReadSlotCount error %v\n", err)
-		}
-
-		err = ub.EraseSlotData()
-		if err != nil {
-			t.Fatalf("EraseSlotData error %v\n", err)
-		}
-
-		newCount, err := ub.ReadSlotCount()
-		if err != nil {
-			t.Fatalf("ReadSlotCount error %v\n", err)
-		}
-
-		fmt.Printf("Original count %d, count after erase %d\n", startingCount.Count, newCount.Count)
-
-		return err
-	}, ub, t)
-
-	if err != nil {
-		t.Errorf("TestSlotDataClear error %v\n", err)
 	}
 }
 

@@ -1,28 +1,32 @@
 package ubloxbluetooth
 
 import (
-	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 
+	"github.com/howeyc/crc16"
 	"github.com/pkg/errors"
 )
 
+const readRecorderOffset = 16
+const readRecorderDataOffset = 8
+
 var (
-	unlockCommand         = []byte{0x00}
-	versionCommand        = []byte{0x01}
-	getTimeCommand        = []byte{0x02}
-	readConfigCommand     = []byte{0x03}
-	writeConfigCommand    = []byte{0x04}
-	readEventLogCommand   = []byte{0x07}
-	abortCommand          = []byte{0x09}
-	echoCommand           = []byte{0x0B}
-	creditCommand         = []byte{0x11}
-	rebootCommand         = []byte{0x13}
-	recorderInfo          = []byte{0x20}
-	readRecorder          = []byte{0x21}
-	queryRecorderMetaData = []byte{0x22}
-	readRecorderData      = []byte{0x23}
-	rssiCommand           = []byte{0x24}
+	unlockCommand           = []byte{0x00}
+	versionCommand          = []byte{0x01}
+	getTimeCommand          = []byte{0x02}
+	readConfigCommand       = []byte{0x03}
+	writeConfigCommand      = []byte{0x04}
+	abortCommand            = []byte{0x09}
+	echoCommand             = []byte{0x0B}
+	creditCommand           = []byte{0x11}
+	rebootCommand           = []byte{0x13}
+	recorderInfoCommand     = []byte{0x20}
+	readRecorderCommand     = []byte{0x21}
+	queryRecorderCommand    = []byte{0x22}
+	readRecorderDataCommand = []byte{0x23}
+	rssiCommand             = []byte{0x24}
 )
 
 // UnlockDevice attempts to unlock the device with the password provided.
@@ -112,34 +116,6 @@ func (ub *UbloxBluetooth) SendCredits(credit int) error {
 	return err
 }
 
-// DownloadEventLog requests a number of log records to be downloaded.
-func (ub *UbloxBluetooth) DownloadEventLog(startingIndex int, fn DownloadNotificationHandler) error {
-	commandParameters := fmt.Sprintf("%s%s", uint16ToString(uint16(startingIndex)), defaultCreditString)
-	return ub.downloadData(readEventLogCommand, commandParameters, readEventLogReply, fn, func(d []byte) error {
-		if bytes.HasPrefix(d, readEventLogReplyBytes) {
-			return nil
-		}
-		return fmt.Errorf("[DownloadEventLog] indication %s does not start with %s", d, readEventLogReply)
-	})
-}
-
-func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string, reply string, dnh DownloadNotificationHandler, dih func([]byte) error) error {
-	if ub.connectedDevice == nil {
-		return fmt.Errorf("ConnectionReply is nil")
-	}
-
-	d, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, command, commandParameters), true)
-	if err != nil {
-		return errors.Wrap(err, "[downloadData] Command error")
-	}
-
-	expected, err := ProcessEventsReply(d, reply)
-	if err != nil {
-		return errors.Wrap(err, "[downloadData] ProcessEventsReply error")
-	}
-	return ub.HandleDataDownload(expected, reply, dnh, dih)
-}
-
 // AbortEventLogRead aborts the read
 func (ub *UbloxBluetooth) AbortEventLogRead() error {
 	if ub.connectedDevice == nil {
@@ -150,14 +126,121 @@ func (ub *UbloxBluetooth) AbortEventLogRead() error {
 	return err
 }
 
+// EchoCommand sends the `data` string as bytes, and receives something in return.
+func (ub *UbloxBluetooth) EchoCommand(data string) (bool, error) {
+	if ub.connectedDevice == nil {
+		return false, fmt.Errorf("ConnectionReply is nil")
+	}
+	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, echoCommand), true)
+	if err != nil {
+		return false, errors.Wrap(err, "RecorderInfo error")
+	}
+	return ProcessEchoReply(d)
+}
+
+// ReadRecorderInfo reads the Recorder information
 func (ub *UbloxBluetooth) ReadRecorderInfo() (*RecorderInfoReply, error) {
 	if ub.connectedDevice == nil {
 		return nil, fmt.Errorf("ConnectionReply is nil")
 	}
 
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, recorderInfo), true)
+	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, recorderInfoCommand), true)
 	if err != nil {
 		return nil, errors.Wrap(err, "RecorderInfo error")
 	}
 	return ProcessReadRecorderInfoReply(d)
+}
+
+// ReadRecorder downloads the record entries for the given `sequence`
+func (ub *UbloxBluetooth) ReadRecorder(sequence int) (*RecorderEvents, error) {
+	var crc int
+	events := []Event{}
+	dataEvents := []int{}
+	csum := crc16.Checksum([]byte{0xff, 0xff}, crc16.CCITTFalseTable)
+	commandParameters := fmt.Sprintf("%s%s", uint32ToString(uint32(sequence)), defaultCreditString)
+	err := ub.downloadData(readRecorderCommand, commandParameters, readRecorderOffset, readRecorderReply, func(d []byte) error {
+		if d != nil {
+			b, err := hex.DecodeString(string(d))
+			if err != nil {
+				return err
+			}
+			csum = crc16.Update(csum, crc16.CCITTTable, b)
+			o := NewRecorderEvent(b)
+			events = append(events, o)
+
+			if o.DataFlag() {
+				dataEvents = append(dataEvents, o.Sequence())
+			}
+		}
+		return nil
+	}, func(d []byte) error {
+		crc = NewDownloadCRC(string(d))
+		return nil
+	})
+
+	fmt.Printf("CRC:\t%x -> %x\n", csum, crc)
+	re := &RecorderEvents{
+		Events:             events,
+		DataEventSequences: dataEvents,
+	}
+
+	return re, err
+}
+
+func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string, lengthOffset int, reply string, dnh func([]byte) error, dih func([]byte) error) error {
+	if ub.connectedDevice == nil {
+		return fmt.Errorf("ConnectionReply is nil")
+	}
+
+	d, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, command, commandParameters), true)
+	if err != nil {
+		return errors.Wrap(err, "[downloadData] Command error")
+	}
+
+	t, err := splitOutResponse(d, reply)
+	if err != nil {
+		return errors.Wrap(err, "[downloadData] processEventsReply error")
+	}
+
+	return ub.HandleDataDownload(stringToInt(t[lengthOffset-4:]), reply, dnh, dih)
+}
+
+func (ub *UbloxBluetooth) QueryRecorderMetaDataCommand(sequence int) (*RecorderMetaDataReply, error) {
+	if ub.connectedDevice == nil {
+		return nil, fmt.Errorf("ConnectionReply is nil")
+	}
+
+	cmd := make([]byte, 5)
+	cmd[0] = queryRecorderCommand[0]
+	binary.LittleEndian.PutUint32(cmd[1:], uint32(sequence))
+
+	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, cmd), true)
+	if err != nil {
+		return nil, errors.Wrap(err, "RecorderInfo error")
+	}
+	return ProcessQueryRecorderMetaDataReply(d)
+}
+
+// ReadRecorderDataCommand issues the readRecorderDataCommand and handles the onslaught of data thats returned
+func (ub *UbloxBluetooth) ReadRecorderDataCommand(sequence int, md *RecorderMetaDataReply) ([]byte, error) {
+	crc := 0
+	csum := crc16.Checksum([]byte{0xff, 0xff}, crc16.CCITTFalseTable)
+	data := []byte{}
+	commandParameters := fmt.Sprintf("%s%s", uint32ToString(uint32(sequence)), defaultCreditString)
+	err := ub.downloadData(readRecorderDataCommand, commandParameters, readRecorderDataOffset, readRecorderDataReply, func(d []byte) error {
+		if d != nil {
+			b, err := hex.DecodeString(string(d))
+			if err != nil {
+				return err
+			}
+			csum = crc16.Update(csum, crc16.CCITTTable, b)
+			data = append(data, b...)
+		}
+		return nil
+	}, func(d []byte) error {
+		crc = NewDownloadCRC(string(d))
+		return nil
+	})
+	fmt.Printf("CRCs. Calculated: %X, Expected %X, Indicated %X\n", csum, md.Crc, crc)
+	return data, err
 }

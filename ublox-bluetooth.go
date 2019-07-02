@@ -19,10 +19,10 @@ type DataResponse struct {
 type Discoveryhandler func([]byte) (bool, error)
 
 // DownloadNotificationHandler is called each time that a Notification is received during a download
-type DownloadNotificationHandler func([]byte) error
+//type DownloadNotificationHandler func([]byte) error
 
 // DownloadIndicationHandler is called each time that an Indication is received during a download
-type DownloadIndicationHandler func(string) error
+//type DownloadIndicationHandler func(string) error
 
 // DataMessageHandler functions are invoked when data is recieved.
 type DataMessageHandler func([]byte) (bool, error)
@@ -262,11 +262,13 @@ var indicationSeperator = []byte("13,")
 // `dnh` Notification handler function which is invoked each time a notification is received.
 //
 // `dih` Indication handler function, which is invoked each time an indication is received.
-func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, dnh DownloadNotificationHandler, dih func([]byte) error) error {
+func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, dnh func([]byte) error, dih func([]byte) error) error {
 	var err error
 	received := 0
 	dataComplete := false
 	indicationRecieved := false
+
+	fmt.Printf("[HandleDataDownload] expecting %d notifications\n", expected)
 	for {
 		select {
 		case data := <-ub.DataChannel:
@@ -284,6 +286,7 @@ func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, 
 				}
 				dataComplete = (received == expected)
 				if dataComplete && indicationRecieved {
+					fmt.Printf("[]-> dataComplete: %t indicationRecieved: %t\n", dataComplete, indicationRecieved)
 					return nil
 				}
 			} else if bytes.HasPrefix(data, gattIndicationResponse) {
@@ -293,6 +296,7 @@ func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, 
 				}
 				indicationRecieved = true
 				if dataComplete && indicationRecieved {
+					fmt.Printf("[]-> dataComplete: %t indicationRecieved: %t\n", dataComplete, indicationRecieved)
 					return nil
 				}
 			} else {
@@ -317,7 +321,7 @@ func (ub *UbloxBluetooth) WaitOnDataChannel(fn DataMessageHandler) error {
 		case e := <-ub.ErrorChannel:
 			return e
 		case <-time.After(ub.timeout):
-			return fmt.Errorf("Timeout")
+			return fmt.Errorf("Data Channel Timeout")
 		}
 	}
 }

@@ -286,7 +286,6 @@ func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, 
 				}
 				dataComplete = (received == expected)
 				if dataComplete && indicationRecieved {
-					fmt.Printf("[]-> dataComplete: %t indicationRecieved: %t\n", dataComplete, indicationRecieved)
 					return nil
 				}
 			} else if bytes.HasPrefix(data, gattIndicationResponse) {
@@ -296,7 +295,6 @@ func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, 
 				}
 				indicationRecieved = true
 				if dataComplete && indicationRecieved {
-					fmt.Printf("[]-> dataComplete: %t indicationRecieved: %t\n", dataComplete, indicationRecieved)
 					return nil
 				}
 			} else {

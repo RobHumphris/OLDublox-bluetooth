@@ -23,9 +23,8 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 
 	//serial.SetVerbose(true)
 
-	// "CE1A0B7E9D79r" "EE9EF8BA058Br"
 	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
-		/*fmt.Printf("[GetTime] starting\n")
+		fmt.Printf("[GetTime] starting\n")
 		time, err := ub.GetTime()
 		if err != nil {
 			t.Errorf("GetTime error %v\n", err)
@@ -52,7 +51,7 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		if err != nil {
 			t.Fatalf("EchoCommand error %v\n", err)
 		}
-		fmt.Printf("[EchoCommand] replied with: %v\n", echo)*/
+		fmt.Printf("[EchoCommand] replied with: %v\n", echo)
 
 		info, err := ub.ReadRecorderInfo()
 		if err != nil {
@@ -67,22 +66,20 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		fmt.Printf("[ReadRecorderInfo] downloaded %d events\n", len(rr.Events))
 		fmt.Printf("[ReadRecorderInfo] has %d data sequences to download\n", len(rr.DataEventSequences))
 
-		//for _, i := range rr.DataEventSequences {
-		i := rr.DataEventSequences[0]
-		md, err := ub.QueryRecorderMetaDataCommand(i)
-		if err != nil {
-			fmt.Printf("[QueryRecorderMetaDataCommand] error: %v\n", err)
-		}
-		fmt.Printf("QueryRecorderMetaDataCommand Sequence: %d -> %v\n", i, md)
-		if md.Valid {
-			b, err := ub.ReadRecorderDataCommand(i, md)
+		for _, i := range rr.DataEventSequences {
+			md, err := ub.QueryRecorderMetaDataCommand(i)
 			if err != nil {
-				fmt.Printf("[ReadRecorderDataCommand] error: %v\n", err)
+				fmt.Printf("[QueryRecorderMetaDataCommand] error: %v\n", err)
 			}
-			fmt.Printf("[ReadRecorderDataCommand] sequence %d received %d bytes (expected %d)\n", i, len(b), md.Length)
+			fmt.Printf("QueryRecorderMetaDataCommand Sequence: %d -> %v\n", i, md)
+			if md.Valid {
+				b, err := ub.ReadRecorderDataCommand(i, md)
+				if err != nil {
+					fmt.Printf("[ReadRecorderDataCommand] error: %v\n", err)
+				}
+				fmt.Printf("[ReadRecorderDataCommand] sequence %d received %d bytes (expected %d)\n", i, len(b), md.Length)
+			}
 		}
-
-		//}
 
 		err = ub.DisconnectFromDevice()
 		if err != nil {

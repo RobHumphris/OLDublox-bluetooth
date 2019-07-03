@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/howeyc/crc16"
 	"github.com/pkg/errors"
 )
 
@@ -152,11 +151,9 @@ func (ub *UbloxBluetooth) ReadRecorderInfo() (*RecorderInfoReply, error) {
 }
 
 // ReadRecorder downloads the record entries for the given `sequence`
-func (ub *UbloxBluetooth) ReadRecorder(sequence int) (*RecorderEvents, error) {
-	var crc int
+func (ub *UbloxBluetooth) ReadRecorder(sequence int, fn func([]byte) error) (*RecorderEvents, error) {
 	events := []Event{}
 	dataEvents := []int{}
-	csum := crc16.Checksum([]byte{0xff, 0xff}, crc16.CCITTFalseTable)
 	commandParameters := fmt.Sprintf("%s%s", uint32ToString(uint32(sequence)), defaultCreditString)
 	err := ub.downloadData(readRecorderCommand, commandParameters, readRecorderOffset, readRecorderReply, func(d []byte) error {
 		if d != nil {
@@ -164,7 +161,7 @@ func (ub *UbloxBluetooth) ReadRecorder(sequence int) (*RecorderEvents, error) {
 			if err != nil {
 				return err
 			}
-			csum = crc16.Update(csum, crc16.CCITTTable, b)
+
 			o := NewRecorderEvent(b)
 			events = append(events, o)
 
@@ -174,11 +171,9 @@ func (ub *UbloxBluetooth) ReadRecorder(sequence int) (*RecorderEvents, error) {
 		}
 		return nil
 	}, func(d []byte) error {
-		crc = NewDownloadCRC(string(d))
 		return nil
 	})
 
-	fmt.Printf("CRC:\t%x -> %x\n", csum, crc)
 	re := &RecorderEvents{
 		Events:             events,
 		DataEventSequences: dataEvents,
@@ -201,10 +196,10 @@ func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string,
 	if err != nil {
 		return errors.Wrap(err, "[downloadData] processEventsReply error")
 	}
-
 	return ub.HandleDataDownload(stringToInt(t[lengthOffset-4:]), reply, dnh, dih)
 }
 
+// QueryRecorderMetaDataCommand gets the
 func (ub *UbloxBluetooth) QueryRecorderMetaDataCommand(sequence int) (*RecorderMetaDataReply, error) {
 	if ub.connectedDevice == nil {
 		return nil, fmt.Errorf("ConnectionReply is nil")
@@ -223,8 +218,6 @@ func (ub *UbloxBluetooth) QueryRecorderMetaDataCommand(sequence int) (*RecorderM
 
 // ReadRecorderDataCommand issues the readRecorderDataCommand and handles the onslaught of data thats returned
 func (ub *UbloxBluetooth) ReadRecorderDataCommand(sequence int, md *RecorderMetaDataReply) ([]byte, error) {
-	crc := 0
-	csum := crc16.Checksum([]byte{0xff, 0xff}, crc16.CCITTFalseTable)
 	data := []byte{}
 	commandParameters := fmt.Sprintf("%s%s", uint32ToString(uint32(sequence)), defaultCreditString)
 	err := ub.downloadData(readRecorderDataCommand, commandParameters, readRecorderDataOffset, readRecorderDataReply, func(d []byte) error {
@@ -233,14 +226,11 @@ func (ub *UbloxBluetooth) ReadRecorderDataCommand(sequence int, md *RecorderMeta
 			if err != nil {
 				return err
 			}
-			csum = crc16.Update(csum, crc16.CCITTTable, b)
 			data = append(data, b...)
 		}
 		return nil
 	}, func(d []byte) error {
-		crc = NewDownloadCRC(string(d))
 		return nil
 	})
-	fmt.Printf("CRCs. Calculated: %X, Expected %X, Indicated %X\n", csum, md.Crc, crc)
 	return data, err
 }

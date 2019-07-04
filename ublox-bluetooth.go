@@ -15,14 +15,8 @@ type DataResponse struct {
 	data  []byte
 }
 
-// DataHandler is called when the UbloxBluetooth DataChannel recieves a message
+// Discoveryhandler is called when the UbloxBluetooth DataChannel recieves a message
 type Discoveryhandler func([]byte) (bool, error)
-
-// DownloadNotificationHandler is called each time that a Notification is received during a download
-//type DownloadNotificationHandler func([]byte) error
-
-// DownloadIndicationHandler is called each time that an Indication is received during a download
-//type DownloadIndicationHandler func(string) error
 
 // DataMessageHandler functions are invoked when data is recieved.
 type DataMessageHandler func([]byte) (bool, error)

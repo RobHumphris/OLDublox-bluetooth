@@ -6,11 +6,11 @@ import (
 	"time"
 )
 
-func newBE(i int) *VehEvent {
+func newBE(i uint32) *VehEvent {
 	return &VehEvent{
 		DataFlag:  true,
 		Sequence:  i,
-		Timestamp: int(time.Now().Unix()),
+		Timestamp: uint32(time.Now().Unix()),
 		EventType: VehEventBoot,
 		BootEvent: &VehBootEvent{
 			Reason:          i,
@@ -42,7 +42,7 @@ func TestPackingAndCasting(t *testing.T) {
 	events := []*VehEvent{}
 
 	for i := 0; i < 10; i++ {
-		events = append(events, newBE(i))
+		events = append(events, newBE(uint32(i)))
 	}
 
 	for _, e := range events {

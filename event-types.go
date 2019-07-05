@@ -25,8 +25,8 @@ var handlers handlersMap
 // VehEvent is the base interface
 type VehEvent struct {
 	DataFlag          bool
-	Sequence          int
-	Timestamp         int
+	Sequence          uint32
+	Timestamp         uint32
 	EventType         int
 	BootEvent         *VehBootEvent
 	SensorEvent       *VehSensorEvent
@@ -37,10 +37,10 @@ type VehEvent struct {
 
 // VehBootEvent structure
 type VehBootEvent struct {
-	Reason          int
+	Reason          uint32
 	SoftwareVersion string
-	HardwareVersion int
-	BuildNumber     int
+	HardwareVersion uint32
+	BuildNumber     uint32
 }
 
 // VehSensorEvent structure
@@ -91,8 +91,8 @@ func newVehEvent(b []byte, et int) (VehEvent, int) {
 	length := 10 + int(b[9])
 	return VehEvent{
 		DataFlag:  b[length] > 0x00,
-		Sequence:  int(binary.LittleEndian.Uint32(b[0:4])),
-		Timestamp: int(binary.LittleEndian.Uint32(b[4:8])),
+		Sequence:  binary.LittleEndian.Uint32(b[0:4]),
+		Timestamp: binary.LittleEndian.Uint32(b[4:8]),
 		EventType: et,
 	}, length
 }
@@ -100,10 +100,10 @@ func newVehEvent(b []byte, et int) (VehEvent, int) {
 func newBootEvent(b []byte) *VehEvent {
 	eb, _ := newVehEvent(b, VehEventBoot)
 	eb.BootEvent = &VehBootEvent{
-		int(binary.LittleEndian.Uint32(b[10:14])),
+		binary.LittleEndian.Uint32(b[10:14]),
 		fmt.Sprintf("%d.%d", b[14], b[15]),
-		int(b[16]),
-		int(b[17]),
+		uint32(b[16]),
+		uint32(b[17]),
 	}
 	return &eb
 }

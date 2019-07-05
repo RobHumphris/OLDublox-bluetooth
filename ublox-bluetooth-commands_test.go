@@ -59,8 +59,8 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		}
 		fmt.Printf("[ReadRecorderInfo] replied with: %v\n", info)
 
-		lastSequenceRead := 0
-		dataSequences := []int{}
+		var lastSequenceRead uint32
+		dataSequences := []uint32{}
 		err = ub.ReadRecorder(info.SequenceNo-info.Count, func(e *VehEvent) error {
 
 			lastSequenceRead = e.Sequence

@@ -257,19 +257,19 @@ func NewACLConnectedReply(d string) (*ACLConnected, error) {
 
 // RecorderInfoReply structure
 type RecorderInfoReply struct {
-	SequenceNo int
-	Count      int
-	SlotUsage  int
-	PoolUsage  int
+	SequenceNo uint32
+	Count      uint16
+	SlotUsage  uint16
+	PoolUsage  uint16
 }
 
 // NewRecorderInfoReply takes the passed string and parses into a RecorderInfoReply
 func NewRecorderInfoReply(s string) *RecorderInfoReply {
 	return &RecorderInfoReply{
-		SequenceNo: stringToInt(s[4:12]),
-		Count:      stringToInt(s[12:16]),
-		SlotUsage:  stringToInt(s[16:20]),
-		PoolUsage:  stringToInt(s[20:24]),
+		SequenceNo: uint32(stringToInt(s[4:12])),
+		Count:      uint16(stringToInt(s[12:16])),
+		SlotUsage:  uint16(stringToInt(s[16:20])),
+		PoolUsage:  uint16(stringToInt(s[20:24])),
 	}
 }
 

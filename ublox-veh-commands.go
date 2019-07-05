@@ -151,8 +151,8 @@ func (ub *UbloxBluetooth) ReadRecorderInfo() (*RecorderInfoReply, error) {
 }
 
 // ReadRecorder downloads the record entries for the given `sequence`
-func (ub *UbloxBluetooth) ReadRecorder(sequence int, fn func(*VehEvent) error) error {
-	commandParameters := fmt.Sprintf("%s%s", uint32ToString(uint32(sequence)), defaultCreditString)
+func (ub *UbloxBluetooth) ReadRecorder(sequence uint32, fn func(*VehEvent) error) error {
+	commandParameters := fmt.Sprintf("%s%s", uint32ToString(sequence), defaultCreditString)
 	err := ub.downloadData(readRecorderCommand, commandParameters, readRecorderOffset, readRecorderReply, func(d []byte) error {
 		if d != nil {
 			b, err := hex.DecodeString(string(d))

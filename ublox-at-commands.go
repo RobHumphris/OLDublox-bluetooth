@@ -155,16 +155,27 @@ func ReadCharacterisiticCommand(connHandle int, valueHandle int) CmdResp {
 	}
 }
 
-func WriteCharacteristicCommand(connHandle int, valueHandle int, data []byte) CmdResp {
+type characteristicCommand struct {
+	connectionHandle int
+	valueHandle      int
+	data             []byte
+}
+
+func writeCharacteristicCommand(c characteristicCommand) CmdResp {
 	return CmdResp{
-		Cmd:  fmt.Sprintf("AT%s=%d,%d,%x", writeCharacteristic, connHandle, valueHandle, data),
+		Cmd:  fmt.Sprintf("AT%s=%d,%d,%x", writeCharacteristic, c.connectionHandle, c.valueHandle, c.data),
 		Resp: gattIndicationResponseString,
 	}
 }
 
-func WriteCharacteristicHexCommand(connHandle int, valueHandle int, data []byte, hex string) CmdResp {
+type characteristicHexCommand struct {
+	*characteristicCommand
+	hex string
+}
+
+func writeCharacteristicHexCommand(c characteristicHexCommand) CmdResp {
 	return CmdResp{
-		Cmd:  fmt.Sprintf("AT%s=%d,%d,%x%s", writeCharacteristic, connHandle, valueHandle, data, hex),
+		Cmd:  fmt.Sprintf("AT%s=%d,%d,%x%s", writeCharacteristic, c.connectionHandle, c.valueHandle, c.data, c.hex),
 		Resp: gattIndicationResponseString,
 	}
 }

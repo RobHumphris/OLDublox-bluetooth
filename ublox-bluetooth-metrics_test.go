@@ -15,23 +15,22 @@ func TestRSSICommand(t *testing.T) {
 	defer ub.Close()
 
 	serial.SetVerbose(true)
-	doRSSITest("CE1A0B7E9D79", ub, t)
-	doRSSITest("D5926479C652r", ub, t)
-	doRSSITest("C1851F6083F8r", ub, t)
+	doRSSITest("CE1A0B7E9D79r", ub, t)
+
 }
 
 func doRSSITest(address string, ub *UbloxBluetooth, t *testing.T) {
-	rssi, err := ub.GetDeviceRSSI(address)
+	err := connectToDevice(address, func(t *testing.T) error {
+		rssi, er := ub.GetRSSI()
+		if er != nil {
+			return er
+		}
+
+		fmt.Printf("RSSI Channel: %d dbm: %d\n", rssi.Channel, rssi.Dbm)
+		return nil
+	}, ub, t)
 	if err != nil {
-		t.Errorf("GetDeviceRSSI %s error %v\n", address, err)
-	} else {
-		fmt.Printf("%s RSSI: %s", address, rssi)
-	}
-	rssi, err = ub.GetDeviceRSSI(address)
-	if err != nil {
-		t.Errorf("GetDeviceRSSI %s error %v\n", address, err)
-	} else {
-		fmt.Printf("%s RSSI: %s", address, rssi)
+		t.Errorf("Connect to device error %v\n", err)
 	}
 }
 

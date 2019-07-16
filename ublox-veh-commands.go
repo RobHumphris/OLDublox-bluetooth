@@ -17,9 +17,13 @@ var (
 	getTimeCommand          = []byte{0x02}
 	readConfigCommand       = []byte{0x03}
 	writeConfigCommand      = []byte{0x04}
+	setTimeCommand          = []byte{0x07}
 	abortCommand            = []byte{0x09}
 	echoCommand             = []byte{0x0B}
+	setSettingCommand       = []byte{0x0D}
+	getSettingCommand       = []byte{0x0E}
 	creditCommand           = []byte{0x11}
+	recorderEraseCommand    = []byte{0x12}
 	rebootCommand           = []byte{0x13}
 	recorderInfoCommand     = []byte{0x20}
 	readRecorderCommand     = []byte{0x21}
@@ -28,13 +32,29 @@ var (
 	rssiCommand             = []byte{0x24}
 )
 
+func (ub *UbloxBluetooth) newCharacteristicCommand(handle int, data []byte) characteristicCommand {
+	return characteristicCommand{
+		ub.connectedDevice.Handle,
+		handle,
+		data,
+	}
+}
+
+func (ub *UbloxBluetooth) newCharacteristicHexCommand(handle int, data []byte, hex string) characteristicHexCommand {
+	return characteristicHexCommand{
+		&characteristicCommand{ub.connectedDevice.Handle, handle, data},
+		hex,
+	}
+}
+
 // UnlockDevice attempts to unlock the device with the password provided.
 func (ub *UbloxBluetooth) UnlockDevice(password []byte) (bool, error) {
 	if ub.connectedDevice == nil {
-		return false, fmt.Errorf("ConnectionReply is nil")
+		return false, ErrNotConnected
 	}
 
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, append(unlockCommand, password...)), true)
+	c := ub.newCharacteristicCommand(commandValueHandle, append(unlockCommand, password...))
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
 	if err != nil {
 		return false, errors.Wrapf(err, "UnlockDevice error")
 	}
@@ -45,10 +65,11 @@ func (ub *UbloxBluetooth) UnlockDevice(password []byte) (bool, error) {
 // GetVersion request the connected device's version
 func (ub *UbloxBluetooth) GetVersion() (*VersionReply, error) {
 	if ub.connectedDevice == nil {
-		return nil, fmt.Errorf("ConnectionReply is nil")
+		return nil, ErrNotConnected
 	}
 
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, versionCommand), true)
+	c := ub.newCharacteristicCommand(commandValueHandle, versionCommand)
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
 	if err != nil {
 		return nil, errors.Wrapf(err, "GetVersion error")
 	}
@@ -56,14 +77,15 @@ func (ub *UbloxBluetooth) GetVersion() (*VersionReply, error) {
 }
 
 // GetTime requests the current device info.
-func (ub *UbloxBluetooth) GetTime() (int, error) {
+func (ub *UbloxBluetooth) GetTime() (int32, error) {
 	if ub.connectedDevice == nil {
-		return -1, fmt.Errorf("ConnectionReply is nil")
+		return -1, ErrNotConnected
 	}
 
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, getTimeCommand), true)
+	c := ub.newCharacteristicCommand(commandValueHandle, getTimeCommand)
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
 	if err != nil {
-		return -1, errors.Wrapf(err, "GetInfo error")
+		return -1, errors.Wrapf(err, "GetTime error")
 	}
 
 	t, err := splitOutResponse(d, infoReply)
@@ -71,16 +93,33 @@ func (ub *UbloxBluetooth) GetTime() (int, error) {
 		return -1, err
 	}
 
-	return stringToInt(t[4:12]), nil
+	// I hate casting something that has just been cast.
+	return int32(stringToInt(t[4:12])), nil
+}
+
+// SetTime sets the current time for the device.
+func (ub *UbloxBluetooth) SetTime(timestamp int32) (*TimeAdjustReply, error) {
+	if ub.connectedDevice == nil {
+		return nil, ErrNotConnected
+	}
+
+	tsHex := uint32ToString(uint32(timestamp))
+	c := ub.newCharacteristicHexCommand(commandValueHandle, setTimeCommand, tsHex)
+	d, err := ub.writeAndWait(writeCharacteristicHexCommand(c), true)
+	if err != nil {
+		return nil, errors.Wrapf(err, "SetTime error")
+	}
+	return NewTimeAdjustReply(d)
 }
 
 // ReadConfig requests the device's current config
 func (ub *UbloxBluetooth) ReadConfig() (*ConfigReply, error) {
 	if ub.connectedDevice == nil {
-		return nil, fmt.Errorf("ConnectionReply is nil")
+		return nil, ErrNotConnected
 	}
 
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, readConfigCommand), true)
+	c := ub.newCharacteristicCommand(commandValueHandle, readConfigCommand)
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
 	if err != nil {
 		return nil, errors.Wrapf(err, "ReadConfig error")
 	}
@@ -90,11 +129,11 @@ func (ub *UbloxBluetooth) ReadConfig() (*ConfigReply, error) {
 // WriteConfig sends the passed config to the device
 func (ub *UbloxBluetooth) WriteConfig(cfg *ConfigReply) error {
 	if ub.connectedDevice == nil {
-		return fmt.Errorf("ConnectionReply is nil")
+		return ErrNotConnected
 	}
 
-	configData := cfg.ByteArray()
-	_, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, writeConfigCommand, configData), true)
+	c := ub.newCharacteristicHexCommand(commandValueHandle, setTimeCommand, cfg.ByteArray())
+	_, err := ub.writeAndWait(writeCharacteristicHexCommand(c), true)
 	return err
 }
 
@@ -107,30 +146,34 @@ var halfwayPoint = DefaultCredit
 // SendCredits messages the connected device to say that it can accept `credit` number of messages
 func (ub *UbloxBluetooth) SendCredits(credit int) error {
 	if ub.connectedDevice == nil {
-		return fmt.Errorf("ConnectionReply is nil")
+		return ErrNotConnected
 	}
 
 	creditHex := uint8ToString(uint8(credit))
-	_, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, creditCommand, creditHex), false)
+	c := ub.newCharacteristicHexCommand(commandValueHandle, setTimeCommand, creditHex)
+	_, err := ub.writeAndWait(writeCharacteristicHexCommand(c), false)
 	return err
 }
 
 // AbortEventLogRead aborts the read
 func (ub *UbloxBluetooth) AbortEventLogRead() error {
 	if ub.connectedDevice == nil {
-		return fmt.Errorf("ConnectionReply is nil")
+		return ErrNotConnected
 	}
 
-	_, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, abortCommand), false)
+	c := ub.newCharacteristicCommand(commandValueHandle, abortCommand)
+	_, err := ub.writeAndWait(writeCharacteristicCommand(c), false)
 	return err
 }
 
 // EchoCommand sends the `data` string as bytes, and receives something in return.
 func (ub *UbloxBluetooth) EchoCommand(data string) (bool, error) {
 	if ub.connectedDevice == nil {
-		return false, fmt.Errorf("ConnectionReply is nil")
+		return false, ErrNotConnected
 	}
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, echoCommand), true)
+
+	c := ub.newCharacteristicCommand(commandValueHandle, echoCommand)
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
 	if err != nil {
 		return false, errors.Wrap(err, "RecorderInfo error")
 	}
@@ -140,10 +183,11 @@ func (ub *UbloxBluetooth) EchoCommand(data string) (bool, error) {
 // ReadRecorderInfo reads the Recorder information
 func (ub *UbloxBluetooth) ReadRecorderInfo() (*RecorderInfoReply, error) {
 	if ub.connectedDevice == nil {
-		return nil, fmt.Errorf("ConnectionReply is nil")
+		return nil, ErrNotConnected
 	}
 
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, recorderInfoCommand), true)
+	c := ub.newCharacteristicCommand(commandValueHandle, recorderInfoCommand)
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
 	if err != nil {
 		return nil, errors.Wrap(err, "RecorderInfo error")
 	}
@@ -173,10 +217,11 @@ func (ub *UbloxBluetooth) ReadRecorder(sequence uint32, fn func(*VehEvent) error
 
 func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string, lengthOffset int, reply string, dnh func([]byte) error, dih func([]byte) error) error {
 	if ub.connectedDevice == nil {
-		return fmt.Errorf("ConnectionReply is nil")
+		return ErrNotConnected
 	}
 
-	d, err := ub.writeAndWait(WriteCharacteristicHexCommand(ub.connectedDevice.Handle, commandValueHandle, command, commandParameters), true)
+	c := ub.newCharacteristicHexCommand(commandValueHandle, command, commandParameters)
+	d, err := ub.writeAndWait(writeCharacteristicHexCommand(c), true)
 	if err != nil {
 		return errors.Wrap(err, "[downloadData] Command error")
 	}
@@ -191,14 +236,16 @@ func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string,
 // QueryRecorderMetaDataCommand gets the
 func (ub *UbloxBluetooth) QueryRecorderMetaDataCommand(sequence int) (*RecorderMetaDataReply, error) {
 	if ub.connectedDevice == nil {
-		return nil, fmt.Errorf("ConnectionReply is nil")
+		return nil, ErrNotConnected
 	}
 
 	cmd := make([]byte, 5)
 	cmd[0] = queryRecorderCommand[0]
 	binary.LittleEndian.PutUint32(cmd[1:], uint32(sequence))
 
-	d, err := ub.writeAndWait(WriteCharacteristicCommand(ub.connectedDevice.Handle, commandValueHandle, cmd), true)
+	c := ub.newCharacteristicCommand(commandValueHandle, cmd)
+
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
 	if err != nil {
 		return nil, errors.Wrap(err, "RecorderInfo error")
 	}
@@ -222,4 +269,18 @@ func (ub *UbloxBluetooth) ReadRecorderDataCommand(sequence int, md *RecorderMeta
 		return nil
 	})
 	return data, err
+}
+
+// GetRSSI returns the RSSI value for the gateway from the connected device
+func (ub *UbloxBluetooth) GetRSSI() (*RSSIReply, error) {
+	if ub.connectedDevice == nil {
+		return nil, ErrNotConnected
+	}
+
+	c := ub.newCharacteristicCommand(commandValueHandle, rssiCommand)
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
+	if err != nil {
+		return nil, errors.Wrapf(err, "GetRSSI error")
+	}
+	return NewRSSIReply(d)
 }

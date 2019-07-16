@@ -8,6 +8,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ErrNotConnected issued if there is no device connected
+var ErrNotConnected = fmt.Errorf("Not Connected")
+
 // DiscoveryReply BLE discovery structure
 type DiscoveryReply struct {
 	BluetoothAddress string
@@ -53,6 +56,7 @@ type RS232SettingsReply struct {
 	ChangeAfterConfirm int
 }
 
+// NewRS232SettingsReply returns a new RS232SettingsReply from the passed string
 func NewRS232SettingsReply(d string) (*RS232SettingsReply, error) {
 	var err error
 	rsRply := RS232SettingsReply{}
@@ -169,6 +173,42 @@ func NewConfigReply(d []byte) (*ConfigReply, error) {
 		AccelSettings:       stringToInt(t[16:20]),
 		SpareOne:            stringToInt(t[20:24]),
 		TemperatureOffset:   stringToInt(t[24:28]),
+	}, nil
+}
+
+// TimeAdjustReply is returned if the sensor has updated its time
+type TimeAdjustReply struct {
+	CurrentTime int
+	UpdatedTime int
+}
+
+// NewTimeAdjustReply returns a TimeAdjustReply
+func NewTimeAdjustReply(d []byte) (*TimeAdjustReply, error) {
+	t, err := splitOutResponse(d, setTimeReply)
+	if err != nil {
+		return nil, err
+	}
+	return &TimeAdjustReply{
+		CurrentTime: stringToInt(t[4:12]),
+		UpdatedTime: stringToInt(t[12:20]),
+	}, nil
+}
+
+// RSSIReply defines the dbm value and the channel it was measured on
+type RSSIReply struct {
+	Dbm     int
+	Channel int
+}
+
+// NewRSSIReply unpacks the pube
+func NewRSSIReply(d []byte) (*RSSIReply, error) {
+	t, err := splitOutResponse(d, rssiReply)
+	if err != nil {
+		return nil, err
+	}
+	return &RSSIReply{
+		Dbm:     stringToInt(t[4:6]),
+		Channel: stringToInt(t[6:8]),
 	}, nil
 }
 

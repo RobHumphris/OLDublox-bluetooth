@@ -37,8 +37,8 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		}
 		fmt.Printf("[GetVersion] replied with: %v\n", version)
 
-		if version.SoftwareVersion != "2.0" {
-			t.Fatalf("Cannot continue with version %s, needs to be 2.0\n", version.SoftwareVersion)
+		if version.SoftwareVersion != "2.1" {
+			t.Fatalf("Cannot continue with version %s, needs to be 2.1\n", version.SoftwareVersion)
 		}
 
 		config, err := ub.ReadConfig()

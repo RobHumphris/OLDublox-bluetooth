@@ -149,8 +149,9 @@ func (ub *UbloxBluetooth) SendCredits(credit int) error {
 		return ErrNotConnected
 	}
 
+	fmt.Println("FlowControl sending credits ", credit)
 	creditHex := uint8ToString(uint8(credit))
-	c := ub.newCharacteristicHexCommand(commandValueHandle, setTimeCommand, creditHex)
+	c := ub.newCharacteristicHexCommand(commandValueHandle, creditCommand, creditHex)
 	_, err := ub.writeAndWait(writeCharacteristicHexCommand(c), false)
 	return err
 }
@@ -194,7 +195,8 @@ func (ub *UbloxBluetooth) ReadRecorderInfo() (*RecorderInfoReply, error) {
 	return ProcessReadRecorderInfoReply(d)
 }
 
-// ReadRecorder downloads the record entries for the given `sequence`
+// ReadRecorder downloads the record entries starting from the given sequence.
+// Each response is converted to a VehEvent and the function `fn` is invoked with it.
 func (ub *UbloxBluetooth) ReadRecorder(sequence uint32, fn func(*VehEvent) error) error {
 	commandParameters := fmt.Sprintf("%s%s", uint32ToString(sequence), defaultCreditString)
 	err := ub.downloadData(readRecorderCommand, commandParameters, readRecorderOffset, readRecorderReply, func(d []byte) error {
@@ -234,7 +236,7 @@ func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string,
 }
 
 // QueryRecorderMetaDataCommand gets the
-func (ub *UbloxBluetooth) QueryRecorderMetaDataCommand(sequence int) (*RecorderMetaDataReply, error) {
+func (ub *UbloxBluetooth) QueryRecorderMetaDataCommand(sequence uint32) (*RecorderMetaDataReply, error) {
 	if ub.connectedDevice == nil {
 		return nil, ErrNotConnected
 	}

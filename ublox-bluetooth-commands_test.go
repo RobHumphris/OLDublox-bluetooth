@@ -21,8 +21,6 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 	}
 	defer ub.Close()
 
-	//serial.SetVerbose(true)
-
 	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
 		fmt.Printf("[GetTime] starting\n")
 		time, err := ub.GetTime()
@@ -57,13 +55,13 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ReadRecorderInfo error %v\n", err)
 		}
-		fmt.Printf("[ReadRecorderInfo] replied with: %v\n", info)
+		fmt.Printf("[ReadRecorderInfo] SequenceNo: %d. Count: %d. SlotUsage: %d. PoolUsage: %d.\n", info.SequenceNo, info.Count, info.SlotUsage, info.PoolUsage)
 
 		var lastSequenceRead uint32
 		dataSequences := []uint32{}
 
-		err = ub.ReadRecorder(info.SequenceNo-10, func(e *VehEvent) error {
-			fmt.Printf("Seqeunce: %d\n", e.Sequence)
+		err = ub.ReadRecorder(0, func(e *VehEvent) error {
+			fmt.Printf("Sequence: %d\n", e.Sequence)
 			lastSequenceRead = e.Sequence
 			if e.DataFlag {
 				dataSequences = append(dataSequences, e.Sequence)
@@ -76,6 +74,18 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		fmt.Printf("[ReadRecorder] Final Sequence %d events\n", lastSequenceRead)
 		fmt.Printf("[ReadRecorder] has %d data sequences to download\n", len(dataSequences))
 
+		for _, s := range dataSequences {
+			meta, err := ub.QueryRecorderMetaDataCommand(s)
+			if err != nil {
+				t.Errorf("QueryRecorderMetaDataCommand error %v", err)
+			} else {
+				fmt.Printf("Metadata - Valid: %t\tLength: %d\tCRC: %X", meta.Valid, meta.Length, meta.Crc)
+				if meta.Valid {
+
+				}
+			}
+		}
+
 		err = ub.DisconnectFromDevice()
 		if err != nil {
 			t.Errorf("DisconnectFromDevice error %v\n", err)
@@ -86,7 +96,6 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 	if err != nil {
 		t.Errorf("exerciseTheDevice error %v\n", err)
 	}
-
 }
 
 func TestPagedDownloads(t *testing.T) {

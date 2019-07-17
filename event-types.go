@@ -3,6 +3,7 @@ package ubloxbluetooth
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 )
 
 const (
@@ -10,7 +11,8 @@ const (
 	VehEventSensor       = 0x02
 	VehEventMessage      = 0x0D
 	VehEventDummy        = 0x16
-	VehEventVibration    = 0x17
+	VehEventTemperature  = 0x64
+	VehEventVibration    = 0x65
 	VehEventConnected    = 0xC0
 	VehEventDisconnected = 0xD0
 	VehEventSystemOff    = 0x00
@@ -32,6 +34,7 @@ type VehEvent struct {
 	SensorEvent       *VehSensorEvent
 	ConnectedEvent    *VehConnectedEvent
 	DisconnectedEvent *VehDisconnectedEvent
+	TemperatureEvent  *VehTemperatureEvent
 	VibrationEvent    *VehVibrationEvent
 }
 
@@ -60,8 +63,20 @@ type VehDisconnectedEvent struct {
 	Mac string
 }
 
+// VehTemperatureEvent structure
+type VehTemperatureEvent struct {
+	Battery         float32
+	Temperature     float32
+	Humidity        float32
+	SoftTemperature float32
+}
+
 // VehVibrationEvent structure
 type VehVibrationEvent struct {
+	Battery     float32
+	Temperature float32
+	Odr         float32
+	Gain        float32
 }
 
 func init() {
@@ -70,6 +85,7 @@ func init() {
 	handlers[VehEventSensor] = newSensorEvent
 	// VehEventMessage
 	// VehEventDummy
+	handlers[VehEventTemperature] = newTemperatureEvent
 	handlers[VehEventVibration] = newVibrationEvent
 	handlers[VehEventConnected] = newConnectedEvent
 	handlers[VehEventDisconnected] = newDisconnectedEvent
@@ -83,7 +99,7 @@ func NewRecorderEvent(b []byte) (*VehEvent, error) {
 	if ok {
 		return fn(b), nil
 	}
-	fmt.Printf("NewRecorderEvent data: %X\n", b)
+	fmt.Printf("NewRecorderEvent data: %v\n", b)
 	return nil, fmt.Errorf("Unhandled Event type: %02X", b[8])
 }
 
@@ -123,6 +139,11 @@ func macString(b []byte, l int) string {
 	return fmt.Sprintf("%X:%X:%X:%X:%X:%X", b[l-1], b[l-2], b[l-3], b[l-4], b[l-5], b[l-6])
 }
 
+func float32FromBytes(b []byte) float32 {
+	intVal := binary.LittleEndian.Uint32(b)
+	return math.Float32frombits(intVal)
+}
+
 func newConnectedEvent(b []byte) *VehEvent {
 	eb, l := newVehEvent(b, VehEventConnected)
 	eb.ConnectedEvent = &VehConnectedEvent{
@@ -135,6 +156,17 @@ func newDisconnectedEvent(b []byte) *VehEvent {
 	eb, l := newVehEvent(b, VehEventDisconnected)
 	eb.DisconnectedEvent = &VehDisconnectedEvent{
 		macString(b, l),
+	}
+	return &eb
+}
+
+func newTemperatureEvent(b []byte) *VehEvent {
+	eb, _ := newVehEvent(b, VehEventConnected)
+	eb.TemperatureEvent = &VehTemperatureEvent{
+		Battery:         float32FromBytes(b[10:14]),
+		Temperature:     float32FromBytes(b[14:18]),
+		Humidity:        float32FromBytes(b[18:22]),
+		SoftTemperature: float32FromBytes(b[22:26]),
 	}
 	return &eb
 }

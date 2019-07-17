@@ -103,18 +103,18 @@ func NewRecorderEvent(b []byte) (*VehEvent, error) {
 	return nil, fmt.Errorf("Unhandled Event type: %02X", b[8])
 }
 
-func newVehEvent(b []byte, et int) (VehEvent, int) {
+func newVehEvent(b []byte) (VehEvent, int) {
 	length := 10 + int(b[9])
 	return VehEvent{
 		DataFlag:  b[length] > 0x00,
 		Sequence:  binary.LittleEndian.Uint32(b[0:4]),
 		Timestamp: binary.LittleEndian.Uint32(b[4:8]),
-		EventType: et,
+		EventType: int(b[8]),
 	}, length
 }
 
 func newBootEvent(b []byte) *VehEvent {
-	eb, _ := newVehEvent(b, VehEventBoot)
+	eb, _ := newVehEvent(b)
 	eb.BootEvent = &VehBootEvent{
 		binary.LittleEndian.Uint32(b[10:14]),
 		fmt.Sprintf("%d.%d", b[14], b[15]),
@@ -125,7 +125,7 @@ func newBootEvent(b []byte) *VehEvent {
 }
 
 func newSensorEvent(b []byte) *VehEvent {
-	eb, l := newVehEvent(b, VehEventSensor)
+	eb, l := newVehEvent(b)
 	eb.SensorEvent = &VehSensorEvent{
 		float32(binary.LittleEndian.Uint16(b[10:12]) / 4),
 		float32(binary.LittleEndian.Uint16(b[12:14]) / 1000),
@@ -135,17 +135,8 @@ func newSensorEvent(b []byte) *VehEvent {
 	return &eb
 }
 
-func macString(b []byte, l int) string {
-	return fmt.Sprintf("%X:%X:%X:%X:%X:%X", b[l-1], b[l-2], b[l-3], b[l-4], b[l-5], b[l-6])
-}
-
-func float32FromBytes(b []byte) float32 {
-	intVal := binary.LittleEndian.Uint32(b)
-	return math.Float32frombits(intVal)
-}
-
 func newConnectedEvent(b []byte) *VehEvent {
-	eb, l := newVehEvent(b, VehEventConnected)
+	eb, l := newVehEvent(b)
 	eb.ConnectedEvent = &VehConnectedEvent{
 		macString(b, l),
 	}
@@ -153,7 +144,7 @@ func newConnectedEvent(b []byte) *VehEvent {
 }
 
 func newDisconnectedEvent(b []byte) *VehEvent {
-	eb, l := newVehEvent(b, VehEventDisconnected)
+	eb, l := newVehEvent(b)
 	eb.DisconnectedEvent = &VehDisconnectedEvent{
 		macString(b, l),
 	}
@@ -161,7 +152,7 @@ func newDisconnectedEvent(b []byte) *VehEvent {
 }
 
 func newTemperatureEvent(b []byte) *VehEvent {
-	eb, _ := newVehEvent(b, VehEventConnected)
+	eb, _ := newVehEvent(b)
 	eb.TemperatureEvent = &VehTemperatureEvent{
 		Battery:         float32FromBytes(b[10:14]),
 		Temperature:     float32FromBytes(b[14:18]),
@@ -172,7 +163,16 @@ func newTemperatureEvent(b []byte) *VehEvent {
 }
 
 func newVibrationEvent(b []byte) *VehEvent {
-	eb, _ := newVehEvent(b, VehEventVibration)
+	eb, _ := newVehEvent(b)
 	eb.VibrationEvent = &VehVibrationEvent{}
 	return &eb
+}
+
+func macString(b []byte, l int) string {
+	return fmt.Sprintf("%X:%X:%X:%X:%X:%X", b[l-1], b[l-2], b[l-3], b[l-4], b[l-5], b[l-6])
+}
+
+func float32FromBytes(b []byte) float32 {
+	intVal := binary.LittleEndian.Uint32(b)
+	return math.Float32frombits(intVal)
 }

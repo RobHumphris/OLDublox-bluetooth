@@ -99,7 +99,6 @@ func NewRecorderEvent(b []byte) (*VehEvent, error) {
 	if ok {
 		return fn(b), nil
 	}
-	fmt.Printf("NewRecorderEvent data: %v\n", b)
 	return nil, fmt.Errorf("Unhandled Event type: %02X", b[8])
 }
 

@@ -149,7 +149,6 @@ func (ub *UbloxBluetooth) SendCredits(credit int) error {
 		return ErrNotConnected
 	}
 
-	fmt.Println("FlowControl sending credits ", credit)
 	creditHex := uint8ToString(uint8(credit))
 	c := ub.newCharacteristicHexCommand(commandValueHandle, creditCommand, creditHex)
 	_, err := ub.writeAndWait(writeCharacteristicHexCommand(c), false)

@@ -254,9 +254,9 @@ func (ub *UbloxBluetooth) QueryRecorderMetaDataCommand(sequence uint32) (*Record
 }
 
 // ReadRecorderDataCommand issues the readRecorderDataCommand and handles the onslaught of data thats returned
-func (ub *UbloxBluetooth) ReadRecorderDataCommand(sequence int, md *RecorderMetaDataReply) ([]byte, error) {
+func (ub *UbloxBluetooth) ReadRecorderDataCommand(sequence uint32, md *RecorderMetaDataReply) ([]byte, error) {
 	data := []byte{}
-	commandParameters := fmt.Sprintf("%s%s", uint32ToString(uint32(sequence)), defaultCreditString)
+	commandParameters := fmt.Sprintf("%s%s", uint32ToString(sequence), defaultCreditString)
 	err := ub.downloadData(readRecorderDataCommand, commandParameters, readRecorderDataOffset, readRecorderDataReply, func(d []byte) error {
 		if d != nil {
 			b, err := hex.DecodeString(string(d))

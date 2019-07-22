@@ -313,16 +313,18 @@ func NewRecorderInfoReply(s string) *RecorderInfoReply {
 	}
 }
 
+// RecorderMetaDataReply holds the parameters that define the data for the sequence
 type RecorderMetaDataReply struct {
-	Length int
+	Length uint32
 	Crc    uint16
 	Valid  bool
 }
 
+// NewRecorderMetaDataReply parses the passed string for the Metadata elements
 func NewRecorderMetaDataReply(s string) *RecorderMetaDataReply {
 	valid := stringToInt(s[16:18])
 	return &RecorderMetaDataReply{
-		Length: stringToInt(s[4:12]),
+		Length: uint32(stringToInt(s[4:12])),
 		Crc:    uint16(stringToInt(s[12:16])),
 		Valid:  valid > 0,
 	}

@@ -10,6 +10,7 @@ import (
 
 const readRecorderOffset = 16
 const readRecorderDataOffset = 8
+const MaxMessageLength = 243
 
 var (
 	unlockCommand           = []byte{0x00}
@@ -25,6 +26,7 @@ var (
 	creditCommand           = []byte{0x11}
 	recorderEraseCommand    = []byte{0x12}
 	rebootCommand           = []byte{0x13}
+	messageCommand          = []byte{0x14}
 	recorderInfoCommand     = []byte{0x20}
 	readRecorderCommand     = []byte{0x21}
 	queryRecorderCommand    = []byte{0x22}
@@ -184,6 +186,22 @@ func (ub *UbloxBluetooth) RebootRecorder() error {
 // AbortEventLogRead aborts the read
 func (ub *UbloxBluetooth) AbortEventLogRead() error {
 	return ub.simpleCommand(abortCommand)
+}
+
+// WriteMessage writes `msg` string to the device's event log. messageCommand
+func (ub *UbloxBluetooth) WriteMessage(msg string) error {
+	if ub.connectedDevice == nil {
+		return ErrNotConnected
+	}
+
+	msgLen := len(msg)
+	if msgLen > MaxMessageLength {
+		msgLen = MaxMessageLength
+	}
+
+	c := ub.newCharacteristicHexCommand(commandValueHandle, writeConfigCommand, stringToHexString(msg[:msgLen]))
+	_, err := ub.writeAndWait(writeCharacteristicHexCommand(c), false)
+	return err
 }
 
 // EchoCommand sends the `data` string as bytes, and receives something in return.

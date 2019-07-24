@@ -132,7 +132,7 @@ func (ub *UbloxBluetooth) WriteConfig(cfg *ConfigReply) error {
 		return ErrNotConnected
 	}
 
-	c := ub.newCharacteristicHexCommand(commandValueHandle, setTimeCommand, cfg.ByteArray())
+	c := ub.newCharacteristicHexCommand(commandValueHandle, writeConfigCommand, cfg.ByteArray())
 	_, err := ub.writeAndWait(writeCharacteristicHexCommand(c), true)
 	return err
 }
@@ -155,15 +155,35 @@ func (ub *UbloxBluetooth) SendCredits(credit int) error {
 	return err
 }
 
-// AbortEventLogRead aborts the read
-func (ub *UbloxBluetooth) AbortEventLogRead() error {
+// EraseRecorder issues the erase command - which wipes the sensor (use with care)
+func (ub *UbloxBluetooth) EraseRecorder() error {
 	if ub.connectedDevice == nil {
 		return ErrNotConnected
 	}
 
-	c := ub.newCharacteristicCommand(commandValueHandle, abortCommand)
+	c := ub.newCharacteristicCommand(commandValueHandle, recorderEraseCommand)
 	_, err := ub.writeAndWait(writeCharacteristicCommand(c), false)
 	return err
+}
+
+func (ub *UbloxBluetooth) simpleCommand(cmd []byte) error {
+	if ub.connectedDevice == nil {
+		return ErrNotConnected
+	}
+
+	c := ub.newCharacteristicCommand(commandValueHandle, cmd)
+	_, err := ub.writeAndWait(writeCharacteristicCommand(c), false)
+	return err
+}
+
+// RebootRecorder issues the reboot command to the sensor.
+func (ub *UbloxBluetooth) RebootRecorder() error {
+	return ub.simpleCommand(rebootCommand)
+}
+
+// AbortEventLogRead aborts the read
+func (ub *UbloxBluetooth) AbortEventLogRead() error {
+	return ub.simpleCommand(abortCommand)
 }
 
 // EchoCommand sends the `data` string as bytes, and receives something in return.

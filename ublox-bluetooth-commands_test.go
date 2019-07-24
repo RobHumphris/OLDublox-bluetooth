@@ -127,7 +127,7 @@ func TestPagedDownloads(t *testing.T) {
 	}
 }
 
-func TestReboot(t *testing.T) {
+func TestRebootUblox(t *testing.T) {
 	ub, err := setupBluetooth()
 	if err != nil {
 		t.Fatalf("setupBluetooth error %v\n", err)

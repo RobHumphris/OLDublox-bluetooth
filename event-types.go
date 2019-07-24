@@ -163,7 +163,12 @@ func newTemperatureEvent(b []byte) *VehEvent {
 
 func newVibrationEvent(b []byte) *VehEvent {
 	eb, _ := newVehEvent(b)
-	eb.VibrationEvent = &VehVibrationEvent{}
+	eb.VibrationEvent = &VehVibrationEvent{
+		Battery:     float32FromBytes(b[10:14]),
+		Temperature: float32FromBytes(b[14:18]),
+		Odr:         float32FromBytes(b[18:22]),
+		Gain:        float32FromBytes(b[22:26]),
+	}
 	return &eb
 }
 

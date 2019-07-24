@@ -173,6 +173,5 @@ func (ub *UbloxBluetooth) ReadCharacterisitic() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "ReadCharacterisitic error")
 	}
-	fmt.Printf("ReadCharacterisitic: %s\n", d)
 	return d, nil
 }

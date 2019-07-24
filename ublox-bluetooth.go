@@ -260,7 +260,6 @@ func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, 
 	dataComplete := false
 	indicationRecieved := false
 
-	fmt.Printf("[HandleDataDownload] expecting %d notifications\n", expected)
 	for {
 		select {
 		case data := <-ub.DataChannel:

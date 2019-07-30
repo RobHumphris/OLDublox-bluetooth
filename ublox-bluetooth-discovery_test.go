@@ -3,6 +3,7 @@ package ubloxbluetooth
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	serial "github.com/8power/ublox-bluetooth/serial"
 )
@@ -21,12 +22,14 @@ func TestDiscovery(t *testing.T) {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	alpha := func(dr *DiscoveryReply) error {
+	timestamp := int32(time.Now().Unix())
+
+	alpha := func(dr *DiscoveryReply, timestamp int32) error {
 		fmt.Printf("Discovery: %v\n", dr)
 		return nil
 	}
 
-	err = ub.DiscoveryCommand(alpha)
+	err = ub.DiscoveryCommand(timestamp, alpha)
 	if err != nil {
 		t.Errorf("TestDiscovery error %v\n", err)
 	}

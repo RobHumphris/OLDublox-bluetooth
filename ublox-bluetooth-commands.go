@@ -76,7 +76,8 @@ func (ub *UbloxBluetooth) PeerList() error {
 }
 
 // DiscoveryCommand issues the Discover command and calls the DiscoveryReplyHandler
-func (ub *UbloxBluetooth) DiscoveryCommand(fn DiscoveryReplyHandler) error {
+// DiscoveryReplyHandler handles discovery replies
+func (ub *UbloxBluetooth) DiscoveryCommand(timestamp int32, fn func(*DiscoveryReply, int32) error) error {
 	dc := DiscoveryCommand()
 	err := ub.Write(dc.Cmd)
 	if err != nil {
@@ -86,7 +87,7 @@ func (ub *UbloxBluetooth) DiscoveryCommand(fn DiscoveryReplyHandler) error {
 	return ub.HandleDiscovery(dc.Resp, func(d []byte) (bool, error) {
 		dr, err := ProcessDiscoveryReply(d)
 		if err == nil {
-			err = fn(dr)
+			err = fn(dr, timestamp)
 		} else if err != ErrUnexpectedResponse {
 			return false, err
 		}

@@ -24,9 +24,6 @@ type DataMessageHandler func([]byte) (bool, error)
 // DeviceEvent functions are called and defined in various events e.g. Connect, Disconnect
 type DeviceEvent func() error
 
-// DiscoveryReplyHandler handles discovery replies
-type DiscoveryReplyHandler func(*DiscoveryReply) error
-
 type ubloxMode int
 
 const commandMode ubloxMode = 0

@@ -231,12 +231,14 @@ func (sp *SerialPort) Flush() error {
 	return nil
 }
 
+var defaultDTRPause = 10 * time.Millisecond
+
 func (sp *SerialPort) setDTR() error {
 	err := sp.ioctl(unix.TIOCMBIS, unix.TIOCM_DTR)
 	if err != nil {
 		return fmt.Errorf("[ToggleDTR] DTR set error: %d", err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(defaultDTRPause)
 	return nil
 }
 
@@ -245,7 +247,7 @@ func (sp *SerialPort) clearDTR() error {
 	if err != nil {
 		return fmt.Errorf("[ToggleDTR] DTR clear error: %d", err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(defaultDTRPause)
 	return nil
 }
 

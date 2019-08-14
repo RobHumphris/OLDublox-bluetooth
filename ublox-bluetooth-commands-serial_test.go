@@ -31,6 +31,7 @@ func setupForSerialTests(t *testing.T, echoOff bool) (*UbloxBluetooth, error) {
 
 func TestReset(t *testing.T) {
 	ub, err := setupForSerialTests(t, false)
+	serial.SetVerbose(true)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}

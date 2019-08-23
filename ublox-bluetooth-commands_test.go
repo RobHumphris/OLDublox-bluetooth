@@ -127,6 +127,32 @@ func TestPagedDownloads(t *testing.T) {
 	}
 }
 
+func TestAttemptToConnectToMissing(t *testing.T) {
+	ub, err := setupBluetooth()
+	if err != nil {
+		t.Fatalf("setupBluetooth error %v\n", err)
+	}
+	defer ub.Close()
+
+	err = connectToDevice("EEEEEEEEEEEEr", func(t *testing.T) error {
+		defer ub.DisconnectFromDevice()
+		ub.PeerList()
+		return nil
+	}, ub, t)
+	if err != nil {
+		t.Errorf("TestReboot error %v\n", err)
+	}
+
+	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
+		defer ub.DisconnectFromDevice()
+		ub.PeerList()
+		return nil
+	}, ub, t)
+	if err != nil {
+		t.Errorf("TestReboot error %v\n", err)
+	}
+}
+
 func TestRebootUblox(t *testing.T) {
 	ub, err := setupBluetooth()
 	if err != nil {

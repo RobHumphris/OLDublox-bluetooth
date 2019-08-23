@@ -9,6 +9,9 @@ import (
 	"github.com/8power/ublox-bluetooth/serial"
 )
 
+var ErrRebooted = fmt.Errorf("Error Ublox has rebooted")
+var ErrTimeout = fmt.Errorf("Timeout")
+
 // DataResponse holds the Token at the start of the reply, and the subsequent data bytes
 type DataResponse struct {
 	token string
@@ -202,6 +205,10 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 			} else {
 				err := handleUnsolicitedMessage(data)
 				if err != nil {
+					if err == ErrRebooted {
+						fmt.Printf("Unexpected reboot - resetting Ublox")
+						ub.serialPort.ResetViaDTR()
+					}
 					return d, err
 				}
 			}
@@ -217,7 +224,7 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 		case e := <-ub.ErrorChannel:
 			return nil, e
 		case <-time.After(ub.timeout):
-			return nil, fmt.Errorf("Timeout")
+			return nil, ErrTimeout
 		}
 	}
 }
@@ -227,7 +234,7 @@ func handleUnsolicitedMessage(data []byte) error {
 		// Todo - handle the likes of +UUBTLEPHYU:0,0,2,2
 	} else {
 		if bytes.HasPrefix(data, rebootResponse) {
-			return fmt.Errorf("Error device has rebooted")
+			return ErrRebooted
 		}
 		fmt.Printf("**** [handleUnexpectedMessage] %s ****\n", data)
 	}
@@ -289,7 +296,7 @@ func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, 
 				return fmt.Errorf("unexpected: %s", data)
 			}
 		case <-time.After(ub.timeout):
-			return fmt.Errorf("Timeout")
+			return ErrTimeout
 		}
 	}
 }
@@ -307,7 +314,7 @@ func (ub *UbloxBluetooth) WaitOnDataChannel(fn DataMessageHandler) error {
 		case e := <-ub.ErrorChannel:
 			return e
 		case <-time.After(ub.timeout):
-			return fmt.Errorf("Data Channel Timeout")
+			return ErrTimeout
 		}
 	}
 }
@@ -331,7 +338,7 @@ func (ub *UbloxBluetooth) HandleDiscovery(expectedResponse string, fn Discoveryh
 		case e := <-ub.ErrorChannel:
 			return e
 		case <-time.After(ub.timeout):
-			return fmt.Errorf("Timeout")
+			return ErrTimeout
 		}
 	}
 }

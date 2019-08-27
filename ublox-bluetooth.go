@@ -205,10 +205,6 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 			} else {
 				err := handleUnsolicitedMessage(data)
 				if err != nil {
-					if err == ErrRebooted {
-						fmt.Printf("Unexpected reboot - resetting Ublox")
-						ub.serialPort.ResetViaDTR()
-					}
 					return d, err
 				}
 			}

@@ -114,10 +114,10 @@ func TestMulipleAccesses(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = ub.EnterExtendedDataMode()
+	/*err = ub.EnterExtendedDataMode()
 	if err != nil {
 		t.Fatalf("EnterDataMode error %v\n", err)
-	}
+	}*/
 
 	err = ub.ATCommand()
 	if err != nil {
@@ -125,10 +125,10 @@ func TestMulipleAccesses(t *testing.T) {
 	}
 
 	for i := 0; i < 100; i++ {
-		fmt.Printf("Starting Access test %d\n", i)
-		t.Fatalf("NEED MORE v2.0 sensors")
-		accessDevice(ub, "C1851F6083F8r")
+		//fmt.Printf("Starting Access test %d\n", i)
+		//t.Fatalf("NEED MORE v2.0 sensors")
+		//accessDevice(ub, "C1851F6083F8r")
 		accessDevice(ub, "CE1A0B7E9D79r")
-		accessDevice(ub, "D8CFDFA118ECr")
+		//accessDevice(ub, "D8CFDFA118ECr")
 	}
 }

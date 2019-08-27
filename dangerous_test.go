@@ -26,6 +26,11 @@ func TestSettingDTRAction(t *testing.T) {
 		t.Fatalf("SetDTRBehavior error %v", err)
 	}
 
+	err = ub.RebootUblox()
+	if err != nil {
+		t.Fatalf("RebootUblox error %v", err)
+	}
+
 	err = ub.ResetUblox()
 	if err != nil {
 		t.Fatalf("SetDTRBehavior error %v", err)

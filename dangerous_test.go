@@ -8,6 +8,30 @@ import (
 	"github.com/pkg/errors"
 )
 
+func TestSettingDTRAction(t *testing.T) {
+	ub, err := NewUbloxBluetooth(timeout)
+	if err != nil {
+		t.Fatalf("NewUbloxBluetooth error %v", err)
+	}
+	defer ub.Close()
+
+	serial.SetVerbose(true)
+	err = ub.MultipleATCommands()
+	if err != nil {
+		t.Fatalf("MultipleATCommands error %v", err)
+	}
+
+	err = ub.SetDTRBehavior()
+	if err != nil {
+		t.Fatalf("SetDTRBehavior error %v", err)
+	}
+
+	err = ub.ResetUblox()
+	if err != nil {
+		t.Fatalf("SetDTRBehavior error %v", err)
+	}
+}
+
 func TestReboot(t *testing.T) {
 	ub, err := setupBluetooth()
 	if err != nil {

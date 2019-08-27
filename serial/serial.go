@@ -251,20 +251,6 @@ func (sp *SerialPort) clearDTR() error {
 	return nil
 }
 
-// ToggleDTR sets and resets the DTR pin
-func (sp *SerialPort) ToggleDTR() error {
-	err := sp.setDTR()
-	if err != nil {
-		return err
-	}
-
-	err = sp.clearDTR()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // ResetViaDTR sends the DTR line low and then takes it high
 // if the board has been setup with AT&D4 this will cause a reset.
 func (sp *SerialPort) ResetViaDTR() error {

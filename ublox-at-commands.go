@@ -107,6 +107,20 @@ func BLERole(role int) CmdResp {
 	}
 }
 
+// SetDTRBehaviorCommand is called with one of the following values:
+// 0 ignore line
+// 1 Assert->Deassert = Enters command mode
+// 2 Assert->Deassert = Orderly disconnect of all radio links
+// 3 Assert->Deassert = UART deactivated. Reactivate with Deassert->Assert
+//   or BT connection
+// 4 Assert->Deassert = Module Shut off. Deassert->Assert start again.
+func SetDTRBehaviorCommand(value int) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT&D%d", value),
+		Resp: empty,
+	}
+}
+
 // BLEConfig sets the Bluetooth LE config (see: 6.26.3 Defined values) from:
 // https://www.u-blox.com/sites/default/files/u-blox-SHO_ATCommands_%28UBX-14044127%29.pdf
 func BLEConfig(param int, val int) CmdResp {

@@ -63,6 +63,20 @@ func (ub *UbloxBluetooth) RebootUblox() error {
 	return ProcessRSSIReply(d)
 }*/
 
+// SetDTRBehavior configures the device to the correct DTR behaviour
+func (ub *UbloxBluetooth) SetDTRBehavior() error {
+	_, err := ub.writeAndWait(SetDTRBehaviorCommand(4), false)
+	if err != nil {
+		return errors.Wrap(err, "SetDTRBehaviorCommand error")
+	}
+
+	_, err = ub.writeAndWait(BLEStoreConfig(), false)
+	if err != nil {
+		return errors.Wrap(err, "BLEStoreConfig error")
+	}
+	return nil
+}
+
 // PeerList returns a list of connected peers.
 func (ub *UbloxBluetooth) PeerList() error {
 	d, err := ub.writeAndWait(PeerListCommand(), true)

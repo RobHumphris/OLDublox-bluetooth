@@ -108,6 +108,8 @@ func TestSingleAccess(t *testing.T) {
 }
 
 func TestMulipleAccesses(t *testing.T) {
+	serial.SetVerbose(true)
+
 	ub, err := NewUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
@@ -124,7 +126,7 @@ func TestMulipleAccesses(t *testing.T) {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1; i++ {
 		//fmt.Printf("Starting Access test %d\n", i)
 		//t.Fatalf("NEED MORE v2.0 sensors")
 		//accessDevice(ub, "C1851F6083F8r")

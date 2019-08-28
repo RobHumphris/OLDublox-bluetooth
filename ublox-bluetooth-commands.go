@@ -135,18 +135,17 @@ func (ub *UbloxBluetooth) DisconnectFromDevice() error {
 	}
 	ub.disconnectExpected = true
 
-	fmt.Print("2")
 	d, err := ub.writeAndWait(DisconnectCommand(ub.connectedDevice.Handle), true)
 	if err != nil {
 		fmt.Printf("DisconnectCommand %v\n", err)
 		return err
 	}
-	fmt.Print("2")
+
 	ok, err := ProcessDisconnectReply(d)
 	if !ok {
 		return fmt.Errorf("Incorrect disconnect reply %q", d)
 	}
-	fmt.Print("3\n")
+
 	ub.connectedDevice = nil
 	ub.disconnectHandler = nil
 	ub.disconnectExpected = false

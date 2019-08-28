@@ -130,14 +130,12 @@ func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent,
 // DisconnectFromDevice issues the disconnect command using the handle from the ConnectionReply
 func (ub *UbloxBluetooth) DisconnectFromDevice() error {
 	if ub.connectedDevice == nil {
-		fmt.Printf("[DisconnectFromDevice] Device has been disconnected\n")
 		return fmt.Errorf("ConnectionReply is nil")
 	}
 	ub.disconnectExpected = true
 
 	d, err := ub.writeAndWait(DisconnectCommand(ub.connectedDevice.Handle), true)
 	if err != nil {
-		fmt.Printf("DisconnectCommand %v\n", err)
 		return err
 	}
 

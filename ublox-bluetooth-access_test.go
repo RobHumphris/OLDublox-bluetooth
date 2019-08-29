@@ -66,7 +66,7 @@ func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Software Version: %s Hardware Version: %s", version.SoftwareVersion, version.HardwareVersion)
+		fmt.Printf("[GetVersion] Software Version: %s Hardware Version: %s\n", version.SoftwareVersion, version.HardwareVersion)
 
 		info, err := ub.GetTime()
 		if err != nil {
@@ -115,11 +115,6 @@ func TestMulipleAccesses(t *testing.T) {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
 	defer ub.Close()
-
-	/*err = ub.EnterExtendedDataMode()
-	if err != nil {
-		t.Fatalf("EnterDataMode error %v\n", err)
-	}*/
 
 	err = ub.ATCommand()
 	if err != nil {

@@ -21,9 +21,17 @@ func SetVerbose(v bool) {
 	verbose = v
 }
 
-func showMsg(format string, v ...interface{}) {
+func showOutMsg(b []byte) {
 	if verbose {
-		fmt.Printf(format, v...)
+		l := len(b) - 2
+		fmt.Printf("-> %s\n", b[5:l])
+	}
+}
+
+func showInMsg(b []byte) {
+	if verbose {
+		l := len(b) - 3
+		fmt.Printf("<- %s\n", b[7:l])
 	}
 }
 
@@ -120,7 +128,7 @@ func (sp *SerialPort) SetBaudRate(baudrate BaudRate, readTimeout time.Duration) 
 
 // Write write's the passed byte array to the serial port
 func (sp *SerialPort) Write(b []byte) error {
-	showMsg("\n-> %s\n", b)
+	showOutMsg(b)
 	_, err := sp.file.Write(b)
 	return err
 }
@@ -173,7 +181,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 					expectedLength = int(binary.BigEndian.Uint16(line[1:3])) + EDMPayloadOverhead
 				} else if lineLen == expectedLength {
 					if line[expectedLength-1] == EDMStopByte {
-						showMsg("\n<- %s", line)
+						showInMsg(line)
 						edmChan <- line[EDMHeaderSize:expectedLength]
 						line = []byte{}
 						expectedLength = -1
@@ -191,7 +199,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 			lineLen = len(line)
 			if bytes.HasSuffix(line, newlineBytes) {
 				if lineLen > 2 {
-					showMsg("\n<- %s\n", buf)
+					showInMsg(buf)
 					dataChan <- line
 				}
 				line = []byte{}

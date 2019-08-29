@@ -53,7 +53,7 @@ func TestSetWatchdog(t *testing.T) {
 	fmt.Println("ResetWatchdogConfiguration OK")
 }
 
-func TestRestViaDTR(t *testing.T) {
+func TestRestartViaDTR(t *testing.T) {
 	var err error
 	serial.SetVerbose(true)
 

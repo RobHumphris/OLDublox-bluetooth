@@ -37,7 +37,16 @@ func TestSettingDTRAction(t *testing.T) {
 	}
 }
 
-func TestReboot(t *testing.T) {
+func TestDongleReboot(t *testing.T) {
+	serial.SetVerbose(true)
+	ub, err := NewUbloxBluetooth(timeout)
+	if err != nil {
+		t.Fatalf("NewUbloxBluetooth error %v", err)
+	}
+	defer ub.Close()
+}
+
+func TestRebootRecorder(t *testing.T) {
 	ub, err := setupBluetooth()
 	if err != nil {
 		t.Fatalf("setupBluetooth error %v\n", err)

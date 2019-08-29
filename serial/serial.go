@@ -31,7 +31,11 @@ func showOutMsg(b []byte) {
 func showInMsg(b []byte) {
 	if verbose {
 		l := len(b) - 3
-		fmt.Printf("<- %s\n", b[7:l])
+		if l > 7 {
+			fmt.Printf("<- %s\n", b[7:l])
+		} else {
+			fmt.Printf("<- %+q\n", b)
+		}
 	}
 }
 

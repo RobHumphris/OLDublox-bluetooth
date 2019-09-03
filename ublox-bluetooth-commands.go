@@ -124,6 +124,7 @@ func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent,
 	ub.connectedDevice = cr
 	ub.disconnectHandler = onDisconnect
 	ub.disconnectExpected = false
+	ub.disconnectCount = 0
 	return onConnect()
 }
 
@@ -132,22 +133,28 @@ func (ub *UbloxBluetooth) DisconnectFromDevice() error {
 	if ub.connectedDevice == nil {
 		return fmt.Errorf("ConnectionReply is nil")
 	}
-	ub.disconnectExpected = true
 
-	d, err := ub.writeAndWait(DisconnectCommand(ub.connectedDevice.Handle), true)
-	if err != nil {
+	if ub.disconnectCount < 1 {
+		ub.disconnectCount++
+		ub.disconnectExpected = true
+
+		d, err := ub.writeAndWait(DisconnectCommand(ub.connectedDevice.Handle), true)
+		if err != nil {
+			return err
+		}
+
+		ok, err := ProcessDisconnectReply(d)
+		if !ok {
+			return fmt.Errorf("Incorrect disconnect reply %q", d)
+		}
+
+		ub.connectedDevice = nil
+		ub.disconnectHandler = nil
+		ub.disconnectExpected = false
 		return err
 	}
 
-	ok, err := ProcessDisconnectReply(d)
-	if !ok {
-		return fmt.Errorf("Incorrect disconnect reply %q", d)
-	}
-
-	ub.connectedDevice = nil
-	ub.disconnectHandler = nil
-	ub.disconnectExpected = false
-	return err
+	return fmt.Errorf("Error attempting to double disconnect")
 }
 
 // EnableIndications instructs the connected device to initialise indiciations

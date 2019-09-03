@@ -39,7 +39,55 @@ func accessDevice(ub *UbloxBluetooth, mac string) error {
 	return err
 }
 
+func TestDoubleDisconnect(t *testing.T) {
+	serial.SetVerbose(false)
+	ub, err := NewUbloxBluetooth(timeout)
+	if err != nil {
+		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+	}
+	defer ub.Close()
+
+	for i := 0; i < 2; i++ {
+		ub.ConnectToDevice("D3BC4C2092C2r", func() error {
+			err := ub.EnableIndications()
+			if err != nil {
+				t.Errorf("[EnableIndications] %v\n", err)
+			}
+
+			err = ub.EnableNotifications()
+			if err != nil {
+				t.Errorf("[EnableNotifications] %v\n", err)
+			}
+
+			_, err = ub.UnlockDevice(password)
+			if err != nil {
+				t.Errorf("[UnlockDevice] %v\n", err)
+			}
+
+			info, err := ub.GetTime()
+			if err != nil {
+				t.Errorf("[GetTime] %v\n", err)
+			}
+			fmt.Printf("[GetTime] replied with: %v\n", info)
+
+			err = ub.DisconnectFromDevice()
+			if err != nil {
+				t.Errorf("[DisconnectFromDevice] First %v\n", err)
+			}
+
+			err = ub.DisconnectFromDevice()
+			if err != nil {
+				t.Errorf("[DisconnectFromDevice] Second %v\n", err)
+			}
+			return nil
+		}, func() error {
+			return fmt.Errorf("disconnected")
+		})
+	}
+}
+
 func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
+	serial.SetVerbose(true)
 	return ub.ConnectToDevice(deviceAddr, func() error {
 		defer ub.DisconnectFromDevice()
 
@@ -94,17 +142,13 @@ func TestSingleAccess(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = ub.EnterExtendedDataMode()
-	if err != nil {
-		t.Fatalf("EnterDataMode error %v\n", err)
-	}
-
 	err = ub.ATCommand()
 	if err != nil {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	accessDevice(ub, "EE9EF8BA058Br")
+	accessDevice(ub, "CE1A0B7E9D79r")
+
 }
 
 func TestMulipleAccesses(t *testing.T) {
@@ -121,7 +165,7 @@ func TestMulipleAccesses(t *testing.T) {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 10; i++ {
 		//fmt.Printf("Starting Access test %d\n", i)
 		//t.Fatalf("NEED MORE v2.0 sensors")
 		//accessDevice(ub, "C1851F6083F8r")

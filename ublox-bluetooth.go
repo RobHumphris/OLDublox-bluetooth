@@ -48,6 +48,7 @@ type UbloxBluetooth struct {
 	stopScanning       chan bool
 	connectedDevice    *ConnectionReply
 	disconnectHandler  DeviceEvent
+	disconnectCount    int
 	disconnectExpected bool
 }
 
@@ -77,7 +78,7 @@ func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
 		CompletedChannel:   make(chan bool),
 		stopScanning:       make(chan bool),
 		connectedDevice:    nil,
-	}
+		disconnectCount:    0}
 
 	sp.SetEDMFlag(true)
 

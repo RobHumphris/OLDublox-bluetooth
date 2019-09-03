@@ -75,7 +75,7 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 	case ATEvent:
 		// we check for disconnect events disconnectResponse
 		if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
-			fmt.Printf("Unexpected disconnect")
+			fmt.Println("Unexpected disconnect")
 			ub.DisconnectFromDevice()
 		}
 		ub.DataChannel <- data

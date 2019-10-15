@@ -33,6 +33,8 @@ func mapEvent(e *VehEvent) {
 		fmt.Printf("DisconnectedEvent %d\n", e.Sequence)
 	case VehEventVibration:
 		fmt.Printf("VibrationEvent %d\n", e.Sequence)
+	case VehEventError:
+		fmt.Printf("ErrorEvent %d\n", e.Sequence)
 	default:
 		fmt.Println("NON!")
 	}

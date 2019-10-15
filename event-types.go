@@ -90,7 +90,7 @@ func init() {
 	handlers[VehEventConnected] = newConnectedEvent
 	handlers[VehEventDisconnected] = newDisconnectedEvent
 	// VehEventSystemOff
-	// VehEventError
+	handlers[VehEventError] = newErrorEvent
 }
 
 // NewRecorderEvent returns new RecorderEvent
@@ -100,6 +100,11 @@ func NewRecorderEvent(b []byte) (*VehEvent, error) {
 		return fn(b), nil
 	}
 	return nil, fmt.Errorf("Unhandled Event type: %02X", b[8])
+}
+
+func newErrorEvent(b []byte) *VehEvent {
+	eb, _ := newVehEvent(b)
+	return &eb
 }
 
 func newVehEvent(b []byte) (VehEvent, int) {

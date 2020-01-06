@@ -11,6 +11,8 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+*.prof
+
 ublox-bluetooth
 executables/discover/discover
 executables/configure/configure

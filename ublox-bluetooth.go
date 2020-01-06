@@ -9,7 +9,10 @@ import (
 	"github.com/8power/ublox-bluetooth/serial"
 )
 
+// ErrRebooted is raised when an Unexpected reboot has occured
 var ErrRebooted = fmt.Errorf("Error Ublox has rebooted")
+
+// ErrTimeout is raised when a communication timeout occurs
 var ErrTimeout = fmt.Errorf("Timeout")
 
 // DataResponse holds the Token at the start of the reply, and the subsequent data bytes
@@ -92,8 +95,8 @@ func (ub *UbloxBluetooth) serialportReader() {
 
 	for {
 		select {
-		case b := <-ub.readChannel:
-			b = bytes.Trim(b, newline)
+		case r := <-ub.readChannel:
+			b := bytes.Trim(r, newline)
 			if len(b) != 0 {
 				switch b[0] {
 				case 'A':
@@ -120,7 +123,6 @@ func (ub *UbloxBluetooth) serialportReader() {
 
 // ResetSerial stops reading threads and
 func (ub *UbloxBluetooth) ResetSerial() error {
-	ub.stopScanning <- true
 	ub.serialPort.Close()
 
 	sp, err := serial.OpenSerialPort(ub.timeout)
@@ -148,6 +150,8 @@ func (ub *UbloxBluetooth) ResetSerial() error {
 
 // Close shuts down the serial port, can closes communication channels.
 func (ub *UbloxBluetooth) Close() {
+	ub.stopScanning <- true
+
 	err := ub.serialPort.Close()
 	if err != nil {
 		fmt.Printf("[Close] error %v\n", err)

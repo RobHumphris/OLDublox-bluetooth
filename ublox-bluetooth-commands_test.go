@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	serial "github.com/8power/ublox-bluetooth/serial"
+	"github.com/fortytw2/leaktest"
 	"github.com/pkg/errors"
 )
 
@@ -14,6 +15,7 @@ const serviceUUID = "23E1B7EA5F782315A7BEADDE10138888"
 
 // TestUbloxBluetoothCommands treads through the list of implemented commands
 func TestUbloxBluetoothCommands(t *testing.T) {
+	defer leaktest.Check(t)()
 	serial.SetVerbose(false)
 	ub, err := setupBluetooth()
 	if err != nil {
@@ -35,7 +37,7 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		}
 		fmt.Printf("[GetVersion] replied with: %v\n", version)
 
-		if version.SoftwareVersion != "2.1" {
+		if version.SoftwareVersion != "3.0" {
 			t.Fatalf("Cannot continue with version %s, needs to be 2.1\n", version.SoftwareVersion)
 		}
 

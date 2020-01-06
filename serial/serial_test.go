@@ -14,9 +14,9 @@ func TestSerial(t *testing.T) {
 	}
 	sp.Flush()
 
-	err = sp.ToggleDTR()
+	err = sp.ResetViaDTR()
 	if err != nil {
-		t.Fatalf("ToggleDTR error %v\n", err)
+		t.Fatalf("ResetViaDTR error %v\n", err)
 	}
 
 	time.Sleep(timeout)

@@ -139,7 +139,7 @@ func BLEStoreConfig() CmdResp {
 	}
 }
 
-// Constructs the command to connect to a device
+// ConnectCommand Constructs the command to connect to a device
 func ConnectCommand(address string) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%s", connect, address),
@@ -147,7 +147,7 @@ func ConnectCommand(address string) CmdResp {
 	}
 }
 
-// Constructs the command to disconnect to a device
+// DisconnectCommand Constructs the command to disconnect to a device
 func DisconnectCommand(handle int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d", disconnect, handle),
@@ -155,6 +155,7 @@ func DisconnectCommand(handle int) CmdResp {
 	}
 }
 
+// WriteCharacteristicConfigurationCommand constructs the command to set device characteristics
 func WriteCharacteristicConfigurationCommand(connHandle int, descHandle int, config int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d,%d,%d", writeCharacteristicConfig, connHandle, descHandle, config),
@@ -162,6 +163,7 @@ func WriteCharacteristicConfigurationCommand(connHandle int, descHandle int, con
 	}
 }
 
+// ReadCharacterisiticCommand constructs the command to read the device's characteristics
 func ReadCharacterisiticCommand(connHandle int, valueHandle int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d,%d", readCharacterisitic, connHandle, valueHandle),
@@ -194,6 +196,7 @@ func writeCharacteristicHexCommand(c characteristicHexCommand) CmdResp {
 	}
 }
 
+// ConnectPeerCommand creates the command
 func ConnectPeerCommand(url string) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%s", connectPeer, url),
@@ -201,6 +204,7 @@ func ConnectPeerCommand(url string) CmdResp {
 	}
 }
 
+// DisconnectPeerCommand creates the command
 func DisconnectPeerCommand(peerHandle int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d", disconnectPeer, peerHandle),
@@ -208,6 +212,7 @@ func DisconnectPeerCommand(peerHandle int) CmdResp {
 	}
 }
 
+// EnterDataModeCommand creates the command
 func EnterDataModeCommand() CmdResp {
 	return CmdResp{
 		Cmd:  enterDataMode,
@@ -215,6 +220,7 @@ func EnterDataModeCommand() CmdResp {
 	}
 }
 
+// EnterExtendedDataModeCommand creates the command
 func EnterExtendedDataModeCommand() CmdResp {
 	return CmdResp{
 		Cmd:  enterExtendedDataMode,
@@ -222,6 +228,7 @@ func EnterExtendedDataModeCommand() CmdResp {
 	}
 }
 
+// IssueEscapeSequence creates the command
 func IssueEscapeSequence() CmdResp {
 	return CmdResp{
 		Cmd:  escapeSequence,

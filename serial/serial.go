@@ -46,6 +46,7 @@ type SerialPort struct {
 	extendedDataMode bool
 	contineScanning  bool
 	isOpen           bool
+	byteBuf          []byte
 }
 
 // BaudRate is a type used for enumerating the permissible rates in our system.
@@ -90,6 +91,7 @@ func OpenSerialPort(readTimeout time.Duration) (p *SerialPort, err error) {
 		extendedDataMode: true,
 		contineScanning:  true,
 		isOpen:           true,
+		byteBuf:          make([]byte, 1),
 	}
 
 	sp.SetBaudRate(HighSpeed, readTimeout)
@@ -137,6 +139,12 @@ func (sp *SerialPort) Write(b []byte) error {
 	return err
 }
 
+func (sp *SerialPort) read() (byte, error) {
+	_, err := sp.file.Read(sp.byteBuf)
+	b := sp.byteBuf[0]
+	return b, err
+}
+
 const EDMStartByte = byte(0xAA)
 const EDMStopByte = byte(0x55)
 const EDMPayloadOverhead = 4
@@ -154,10 +162,9 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 	lineLen := 0
 	expectedLength := -1
 	edmStartReceived := false
-	buf := make([]byte, 1)
-	for sp.contineScanning == true {
-		_, err := sp.file.Read(buf)
 
+	for sp.contineScanning == true {
+		b, err := sp.read()
 		if err != nil {
 			if err == io.EOF { // ignore EOFs we're going to get them all the time.
 				continue
@@ -173,12 +180,12 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 
 		if sp.extendedDataMode {
 			if !edmStartReceived {
-				if buf[0] == EDMStartByte {
+				if b == EDMStartByte {
 					edmStartReceived = true
 				}
 			}
 			if edmStartReceived {
-				line = append(line, buf[0])
+				line = append(line, b)
 				lineLen = len(line)
 
 				if expectedLength == -1 && lineLen == 3 {
@@ -199,11 +206,11 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 				}
 			}
 		} else {
-			line = append(line, buf[0])
+			line = append(line, b)
 			lineLen = len(line)
 			if bytes.HasSuffix(line, newlineBytes) {
 				if lineLen > 2 {
-					showInMsg(buf)
+					showInMsg(line)
 					dataChan <- line
 				}
 				line = []byte{}

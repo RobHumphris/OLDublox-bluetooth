@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-const EDMStartByte = byte(0xAA)
-const EDMStopByte = byte(0x55)
-const EDMPayloadOverhead = 4
+const edmStartByte = byte(0xAA)
+const edmStopByte = byte(0x55)
+const edmPayloadOverhead = 4
 
 // EMDCmdResp holds EDM CoMmanD and the expected RESPonse
 type EMDCmdResp struct {
@@ -19,11 +19,11 @@ type EMDCmdResp struct {
 // NewEMDCmdBytes creates an EDM command containing the `payload` content
 func NewEMDCmdBytes(payload []byte) []byte {
 	l := uint16(len(payload))
-	b := make([]byte, l+EDMPayloadOverhead)
-	b[0] = EDMStartByte
+	b := make([]byte, l+edmPayloadOverhead)
+	b[0] = edmStartByte
 	binary.BigEndian.PutUint16(b[1:], l)
 	copy(b[3:], payload)
-	b[3+l] = EDMStopByte
+	b[3+l] = edmStopByte
 	return b
 }
 

@@ -2,6 +2,7 @@ package ubloxbluetooth
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -48,7 +49,8 @@ type UbloxBluetooth struct {
 	EDMChannel         chan []byte
 	ErrorChannel       chan error
 	CompletedChannel   chan bool
-	stopScanning       chan bool
+	ctx                context.Context
+	cancel             context.CancelFunc
 	connectedDevice    *ConnectionReply
 	disconnectHandler  DeviceEvent
 	disconnectCount    int
@@ -68,6 +70,8 @@ func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
 		return nil, err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	ub := &UbloxBluetooth{
 		timeout:            timeout,
 		lastCommand:        "",
@@ -79,7 +83,8 @@ func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
 		EDMChannel:         make(chan []byte),
 		ErrorChannel:       make(chan error),
 		CompletedChannel:   make(chan bool),
-		stopScanning:       make(chan bool),
+		ctx:                ctx, //stopScanning:       make(chan bool),
+		cancel:             cancel,
 		connectedDevice:    nil,
 		disconnectCount:    0}
 
@@ -114,7 +119,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 					ub.ErrorChannel <- err
 				}
 			}
-		case _ = <-ub.stopScanning:
+		case <-ub.ctx.Done():
 			ub.serialPort.StopScanning()
 			return
 		}
@@ -150,7 +155,7 @@ func (ub *UbloxBluetooth) ResetSerial() error {
 
 // Close shuts down the serial port, can closes communication channels.
 func (ub *UbloxBluetooth) Close() {
-	ub.stopScanning <- true
+	ub.cancel()
 
 	err := ub.serialPort.Close()
 	if err != nil {

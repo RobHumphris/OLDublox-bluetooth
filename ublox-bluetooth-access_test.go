@@ -48,7 +48,7 @@ func TestDoubleDisconnect(t *testing.T) {
 	defer ub.Close()
 
 	for i := 0; i < 2; i++ {
-		ub.ConnectToDevice("D3BC4C2092C2r", func() error {
+		ub.ConnectToDevice("F189B7AEC003r", func() error {
 			err := ub.EnableIndications()
 			if err != nil {
 				t.Errorf("[EnableIndications] %v\n", err)

@@ -10,7 +10,7 @@ import (
 
 const readRecorderOffset = 16
 const readRecorderDataOffset = 8
-const MaxMessageLength = 243
+const maxMessageLength = 243
 
 var (
 	unlockCommand           = []byte{0x00}
@@ -32,6 +32,10 @@ var (
 	queryRecorderCommand    = []byte{0x22}
 	readRecorderDataCommand = []byte{0x23}
 	rssiCommand             = []byte{0x24}
+	perTestCommand          = []byte{0x25}
+	liveFFTCommand          = []byte{0x26}
+	setConfigExtCommand     = []byte{0x80}
+	getConfigExtCommand     = []byte{0x81}
 )
 
 func (ub *UbloxBluetooth) newCharacteristicCommand(handle int, data []byte) characteristicCommand {
@@ -139,6 +143,33 @@ func (ub *UbloxBluetooth) WriteConfig(cfg *ConfigReply) error {
 	return err
 }
 
+// GetConfigExt gets the Extended Config
+func (ub *UbloxBluetooth) GetConfigExt() ([]byte, error) {
+	if ub.connectedDevice == nil {
+		return nil, ErrNotConnected
+	}
+
+	c := ub.newCharacteristicCommand(commandValueHandle, getConfigExtCommand)
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
+	if err != nil {
+		return nil, errors.Wrapf(err, "ReadConfig error")
+	}
+	r := make([]byte, len(d))
+	copy(r, d[1:])
+	return r, nil
+}
+
+// SetConfigExt sets the Extended Config
+func (ub *UbloxBluetooth) SetConfigExt(p []byte) error {
+	if ub.connectedDevice == nil {
+		return ErrNotConnected
+	}
+
+	c := ub.newCharacteristicHexCommand(commandValueHandle, setConfigExtCommand, hex.EncodeToString(p))
+	_, err := ub.writeAndWait(writeCharacteristicHexCommand(c), true)
+	return err
+}
+
 // DefaultCredit says that we can handle 16 messages in our FIFO
 const DefaultCredit = 16
 
@@ -195,8 +226,8 @@ func (ub *UbloxBluetooth) WriteMessage(msg string) error {
 	}
 
 	msgLen := len(msg)
-	if msgLen > MaxMessageLength {
-		msgLen = MaxMessageLength
+	if msgLen > maxMessageLength {
+		msgLen = maxMessageLength
 	}
 
 	c := ub.newCharacteristicHexCommand(commandValueHandle, writeConfigCommand, stringToHexString(msg[:msgLen]))

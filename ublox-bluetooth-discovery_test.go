@@ -29,8 +29,12 @@ func TestDiscovery(t *testing.T) {
 		return nil
 	}
 
-	err = ub.DiscoveryCommand(timestamp, alpha)
+	scan := 20 * time.Second
+	err = ub.DiscoveryCommand(timestamp, scan, alpha)
 	if err != nil {
 		t.Errorf("TestDiscovery error %v\n", err)
 	}
+
+	period := int32(time.Now().Unix()) - timestamp
+	fmt.Printf("Ran for %d\n", period)
 }

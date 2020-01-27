@@ -88,9 +88,9 @@ func PeerListCommand() CmdResp {
 }
 
 // DiscoveryCommand - commands that all is discovered
-func DiscoveryCommand() CmdResp {
+func DiscoveryCommand(scanMS int) CmdResp {
 	return CmdResp{
-		Cmd:  fmt.Sprintf("AT%s=4,1", discovery),
+		Cmd:  fmt.Sprintf("AT%s=4,1,%d", discovery, scanMS),
 		Resp: discoveryResponseString,
 	}
 }

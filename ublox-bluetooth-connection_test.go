@@ -20,7 +20,7 @@ func TestMultipleConnects(t *testing.T) {
 	}
 	//defer ub.Close()
 
-	err = ub.ConfigureUblox()
+	err = ub.ConfigureUblox(timeout)
 	if err != nil {
 		t.Fatalf("ConfigureUblox error %v\n", err)
 	}

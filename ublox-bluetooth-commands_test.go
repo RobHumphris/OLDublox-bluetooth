@@ -184,10 +184,10 @@ func setupBluetooth() (*UbloxBluetooth, error) {
 		return nil, errors.Wrap(err, "NewUbloxBluetooth error")
 	}
 
-	/*err = ub.ConfigureUblox()
+	err = ub.ConfigureUblox(timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "ConfigureUblox error")
-	}*/
+	}
 
 	err = ub.RebootUblox()
 	if err != nil {

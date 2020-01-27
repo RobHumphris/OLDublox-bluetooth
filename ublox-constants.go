@@ -46,6 +46,7 @@ const bleSimultaneous = 3
 const bleConfiguration = "+UBTLECFG"
 const minConnectionInterval = 4
 const maxConnectionInterval = 5
+const connectCreateConnectionTimeout = 8
 
 const connect = "+UBTACLC"
 const connectResponse = "+UUBTACLC:"

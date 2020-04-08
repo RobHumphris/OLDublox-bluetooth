@@ -157,6 +157,7 @@ func (ub *UbloxBluetooth) ResetSerial() error {
 func (ub *UbloxBluetooth) Close() {
 	ub.cancel()
 
+	ub.serialPort.StopScanning()
 	err := ub.serialPort.Close()
 	if err != nil {
 		fmt.Printf("[Close] error %v\n", err)

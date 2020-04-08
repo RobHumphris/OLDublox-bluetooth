@@ -96,6 +96,13 @@ func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
 }
 
 func (ub *UbloxBluetooth) serialportReader() {
+	defer func() {
+		if err := recover(); err != nil {
+			// Should be enough to avoid a crash/stack trace
+			fmt.Printf("[UbSerialPortReader] Caught Panic: %v", err)
+		}
+	}()
+
 	go ub.serialPort.ScanPort(ub.readChannel, ub.EDMChannel, ub.ErrorChannel)
 
 	for {

@@ -98,8 +98,13 @@ func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
 func (ub *UbloxBluetooth) serialportReader() {
 	defer func() {
 		if err := recover(); err != nil {
-			// Should be enough to avoid a crash/stack trace
-			fmt.Printf("[UbSerialPortReader] Caught Panic: %v", err)
+			if fmt.Sprintf("%v", err) == "send on closed channel" {
+				// Should be enough to avoid a crash/stack trace on shutdown
+				fmt.Printf("[UbSerialPortReader] Caught Panic: %v", err)
+			} else {
+				// Other issue, rethrow the panic
+				panic(err)
+			}
 		}
 	}()
 

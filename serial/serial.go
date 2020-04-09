@@ -154,9 +154,21 @@ func (sp *SerialPort) StopScanning() {
 	sp.contineScanning = false
 }
 
-// ScanLines reads a complete line from the serial port and sends the bytes
+// ScanPort reads a complete line from the serial port and sends the bytes
 // to the passed channel
 func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errChan chan error) {
+	defer func() {
+		if err := recover(); err != nil {
+			if fmt.Sprintf("%v", err) == "send on closed channel" {
+				// Should be enough to avoid a crash/stack trace on shutdown
+				fmt.Printf("[UbScanPort] Caught Panic: %v", err)
+			} else {
+				// Other issue, rethrow the panic
+				panic(err)
+			}
+		}
+	}()
+
 	sp.contineScanning = true
 	line := []byte{}
 	lineLen := 0

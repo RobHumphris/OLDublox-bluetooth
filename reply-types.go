@@ -1,6 +1,8 @@
 package ubloxbluetooth
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -174,6 +176,20 @@ func NewConfigReply(d []byte) (*ConfigReply, error) {
 		SpareOne:            stringToInt(t[20:24]),
 		TemperatureOffset:   stringToInt(t[24:28]),
 	}, nil
+}
+
+func serialNumberReply(d []byte) (string, error) {
+	t, err := splitOutResponse(d, readSerialNumberReply)
+	if err != nil {
+		return "", errors.Wrap(err, "splitOutResponse error")
+	}
+
+	b, err := hex.DecodeString(t[4:])
+	if err != nil {
+		return "", errors.Wrap(err, "DecodeString error")
+	}
+	sn := binary.LittleEndian.Uint64(b)
+	return fmt.Sprintf("%d", sn), nil
 }
 
 // TimeAdjustReply is returned if the sensor has updated its time

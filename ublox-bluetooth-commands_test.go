@@ -16,14 +16,26 @@ const serviceUUID = "23E1B7EA5F782315A7BEADDE10138888"
 // TestUbloxBluetoothCommands treads through the list of implemented commands
 func TestUbloxBluetoothCommands(t *testing.T) {
 	defer leaktest.Check(t)()
-	serial.SetVerbose(false)
+	serial.SetVerbose(true)
 	ub, err := setupBluetooth()
 	if err != nil {
 		t.Fatalf("setupBluetooth error %v\n", err)
 	}
 	defer ub.Close()
 
-	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
+	err = connectToDevice("EAA4997A81C4r", func(t *testing.T) error {
+		version, err := ub.GetVersion()
+		if err != nil {
+			t.Fatalf("GetVersion error %v\n", err)
+		}
+		fmt.Printf("[GetVersion] replied with: %v\n", version)
+
+		serialNumber, err := ub.ReadSerialNumber()
+		if err != nil {
+			t.Fatalf("ReadSerialNumber error %v\n", err)
+		}
+		fmt.Printf("[ReadSerialNumber] replied with: %s\n", serialNumber)
+
 		fmt.Printf("[GetTime] starting\n")
 		time, err := ub.GetTime()
 		if err != nil {
@@ -31,15 +43,9 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		}
 		fmt.Printf("[GetTime] Current timestamp %d\n", time)
 
-		version, err := ub.GetVersion()
-		if err != nil {
-			t.Fatalf("GetVersion error %v\n", err)
-		}
-		fmt.Printf("[GetVersion] replied with: %v\n", version)
-
-		if version.SoftwareVersion != "3.0" {
+		/*if version.SoftwareVersion != "3.0" {
 			t.Fatalf("Cannot continue with version %s, needs to be 2.1\n", version.SoftwareVersion)
-		}
+		}*/
 
 		config, err := ub.ReadConfig()
 		if err != nil {

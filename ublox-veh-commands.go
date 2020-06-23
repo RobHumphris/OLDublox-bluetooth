@@ -18,6 +18,7 @@ var (
 	getTimeCommand          = []byte{0x02}
 	readConfigCommand       = []byte{0x03}
 	writeConfigCommand      = []byte{0x04}
+	readSerialNumberCommand = []byte{0x05}
 	setTimeCommand          = []byte{0x07}
 	abortCommand            = []byte{0x09}
 	echoCommand             = []byte{0x0B}
@@ -127,7 +128,7 @@ func (ub *UbloxBluetooth) ReadConfig() (*ConfigReply, error) {
 	c := ub.newCharacteristicCommand(commandValueHandle, readConfigCommand)
 	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
 	if err != nil {
-		return nil, errors.Wrapf(err, "ReadConfig error")
+		return nil, errors.Wrap(err, "ReadConfig error")
 	}
 	return NewConfigReply(d)
 }
@@ -141,6 +142,20 @@ func (ub *UbloxBluetooth) WriteConfig(cfg *ConfigReply) error {
 	c := ub.newCharacteristicHexCommand(commandValueHandle, writeConfigCommand, cfg.ByteArray())
 	_, err := ub.writeAndWait(writeCharacteristicHexCommand(c), true)
 	return err
+}
+
+// ReadSerialNumber reads the serial number of the device.
+func (ub *UbloxBluetooth) ReadSerialNumber() (string, error) {
+	if ub.connectedDevice == nil {
+		return "", ErrNotConnected
+	}
+
+	c := ub.newCharacteristicCommand(commandValueHandle, readSerialNumberCommand)
+	d, err := ub.writeAndWait(writeCharacteristicCommand(c), true)
+	if err != nil {
+		return "", errors.Wrap(err, "ReadSerialNumber error")
+	}
+	return serialNumberReply(d)
 }
 
 // GetConfigExt gets the Extended Config

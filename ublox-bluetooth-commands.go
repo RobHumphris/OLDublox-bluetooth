@@ -1,6 +1,7 @@
 package ubloxbluetooth
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -89,17 +90,28 @@ func (ub *UbloxBluetooth) PeerList() error {
 	return nil
 }
 
+// DiscoveryReplyCallback function is called for each DiscoveryReply
+type DiscoveryReplyCallback func(*DiscoveryReply, int32) error
+
 // DiscoveryCommand issues the Discover command and calls the DiscoveryReplyHandler
 // DiscoveryReplyHandler handles discovery replies
-func (ub *UbloxBluetooth) DiscoveryCommand(timestamp int32, scantime time.Duration, fn func(*DiscoveryReply, int32) error) error {
+func (ub *UbloxBluetooth) DiscoveryCommand(timestamp int32, scantime time.Duration, fn DiscoveryReplyCallback) error {
 	scanPeriod := int(scantime / time.Millisecond)
 	dc := DiscoveryCommand(scanPeriod)
 	err := ub.Write(dc.Cmd)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Write error")
 	}
 
-	return ub.HandleDiscovery(dc.Resp, func(d []byte) (bool, error) {
+	err = ub.handleDiscovery(dc.Resp, timestamp, fn)
+	if err != nil {
+		return errors.Wrap(err, "handleDiscovery error")
+	}
+	return nil
+}
+
+func (ub *UbloxBluetooth) handleDiscovery(expResp string, timestamp int32, fn DiscoveryReplyCallback) error {
+	return ub.HandleDiscovery(expResp, func(d []byte) (bool, error) {
 		dr, err := ProcessDiscoveryReply(d)
 		if err == nil {
 			err = fn(dr, timestamp)
@@ -108,6 +120,26 @@ func (ub *UbloxBluetooth) DiscoveryCommand(timestamp int32, scantime time.Durati
 		}
 		return true, nil
 	})
+}
+
+// DiscoveryCommandWithContext issues discovery command and handles the replies, with a context to cancel
+func (ub *UbloxBluetooth) DiscoveryCommandWithContext(ctx context.Context, timestamp int32, scantime time.Duration, fn DiscoveryReplyCallback) error {
+	scanPeriod := int(scantime / time.Millisecond)
+	dc := DiscoveryCommand(scanPeriod)
+	err := ub.Write(dc.Cmd)
+	if err != nil {
+		return err
+	}
+
+	errChan := make(chan error, 1)
+	go func() { errChan <- ub.handleDiscovery(dc.Resp, timestamp, fn) }()
+
+	select {
+	case e := <-errChan:
+		return e
+	case <-ctx.Done():
+		return nil
+	}
 }
 
 // ConnectToDevice attempts to connect to the device with the specified address.

@@ -1,6 +1,7 @@
 package ubloxbluetooth
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -29,12 +30,23 @@ func TestDiscovery(t *testing.T) {
 		return nil
 	}
 
-	scan := 20 * time.Second
+	scan := 6 * time.Second
 	err = ub.DiscoveryCommand(timestamp, scan, alpha)
 	if err != nil {
-		t.Errorf("TestDiscovery error %v\n", err)
+		t.Errorf("TestDiscovery(1) error %v\n", err)
 	}
+	fmt.Printf("1 Ran for %d\n", int32(time.Now().Unix())-timestamp)
 
-	period := int32(time.Now().Unix()) - timestamp
-	fmt.Printf("Ran for %d\n", period)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(2 * time.Second)
+		cancel()
+	}()
+
+	timestamp = int32(time.Now().Unix())
+	err = ub.DiscoveryCommandWithContext(ctx, timestamp, scan, alpha)
+	if err != nil {
+		t.Errorf("TestDiscovery(2) error %v\n", err)
+	}
+	fmt.Printf("1 Ran for %d\n", int32(time.Now().Unix())-timestamp)
 }

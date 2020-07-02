@@ -122,6 +122,9 @@ func (ub *UbloxBluetooth) handleDiscovery(expResp string, timestamp int32, fn Di
 	})
 }
 
+// ErrorContextCancelled returned if the Context is cancelled
+var ErrorContextCancelled = fmt.Errorf("Context Cancelled")
+
 // DiscoveryCommandWithContext issues discovery command and handles the replies, with a context to cancel
 func (ub *UbloxBluetooth) DiscoveryCommandWithContext(ctx context.Context, timestamp int32, scantime time.Duration, fn DiscoveryReplyCallback) error {
 	scanPeriod := int(scantime / time.Millisecond)
@@ -138,7 +141,7 @@ func (ub *UbloxBluetooth) DiscoveryCommandWithContext(ctx context.Context, times
 	case e := <-errChan:
 		return e
 	case <-ctx.Done():
-		return nil
+		return ErrorContextCancelled
 	}
 }
 

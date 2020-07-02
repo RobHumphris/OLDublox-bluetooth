@@ -31,12 +31,13 @@ func TestDiscovery(t *testing.T) {
 	}
 
 	scan := 6 * time.Second
-	err = ub.DiscoveryCommand(timestamp, scan, alpha)
-	if err != nil {
-		t.Errorf("TestDiscovery(1) error %v\n", err)
-	}
-	fmt.Printf("1 Ran for %d\n", int32(time.Now().Unix())-timestamp)
-
+	/*
+		err = ub.DiscoveryCommand(timestamp, scan, alpha)
+		if err != nil {
+			t.Errorf("TestDiscovery(1) error %v\n", err)
+		}
+		fmt.Printf("1 Ran for %d\n", int32(time.Now().Unix())-timestamp)
+	*/
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		time.Sleep(2 * time.Second)
@@ -46,7 +47,12 @@ func TestDiscovery(t *testing.T) {
 	timestamp = int32(time.Now().Unix())
 	err = ub.DiscoveryCommandWithContext(ctx, timestamp, scan, alpha)
 	if err != nil {
-		t.Errorf("TestDiscovery(2) error %v\n", err)
+		if err == ErrorContextCancelled {
+			fmt.Println("function returned ErrorContextCancelled error (which is correct)")
+		} else {
+			t.Errorf("TestDiscovery(2) error %v\n", err)
+		}
+
 	}
-	fmt.Printf("1 Ran for %d\n", int32(time.Now().Unix())-timestamp)
+	fmt.Printf("2 Ran for %d\n", int32(time.Now().Unix())-timestamp)
 }

@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
-	serial "github.com/8power/ublox-bluetooth/serial"
 )
 
 // TestDiscovery
 func TestDiscovery(t *testing.T) {
-	serial.SetVerbose(true)
-	ub, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+
 	defer ub.Close()
+
+	ub.serialPort.SetVerbose(true)
 
 	err = ub.ATCommand()
 	if err != nil {

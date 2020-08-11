@@ -8,7 +8,7 @@ import (
 func TestSerial(t *testing.T) {
 	timeout := 5 * time.Second
 	//readChannel := make(chan []byte)
-	sp, err := OpenSerialPort(timeout)
+	sp, err := OpenSerialPort("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("Open Port Error %v\n", err)
 	}

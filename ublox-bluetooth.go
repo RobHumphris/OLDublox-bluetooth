@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/8power/ublox-bluetooth/serial"
+	"github.com/pkg/errors"
 )
 
 // ErrRebooted is raised when an Unexpected reboot has occured
@@ -15,6 +16,12 @@ var ErrRebooted = fmt.Errorf("Error Ublox has rebooted")
 
 // ErrTimeout is raised when a communication timeout occurs
 var ErrTimeout = fmt.Errorf("Timeout")
+
+// ErrNoDongles No EH750's detected
+var ErrNoDongles = fmt.Errorf("No EH750's located")
+
+// ErrBadDeviceIndex
+var ErrBadDeviceIndex = fmt.Errorf("Bad device index")
 
 // DataResponse holds the Token at the start of the reply, and the subsequent data bytes
 type DataResponse struct {
@@ -41,6 +48,7 @@ const extendedDataMode ubloxMode = 2
 type UbloxBluetooth struct {
 	timeout            time.Duration
 	lastCommand        string
+	serialID           *serial.BtdSerial
 	serialPort         *serial.SerialPort
 	currentMode        ubloxMode
 	StartEventReceived bool
@@ -57,9 +65,63 @@ type UbloxBluetooth struct {
 	disconnectExpected bool
 }
 
+type BluetoothDevices struct {
+	bluetoothDevice []*UbloxBluetooth
+}
+
+func (btd *BluetoothDevices) DeviceCount() int {
+	return len(btd.bluetoothDevice)
+}
+
+func (btd *BluetoothDevices) GetDevice(device int) (*UbloxBluetooth, error) {
+	if device < 0 || device >= len(btd.bluetoothDevice) {
+		return nil, ErrBadDeviceIndex
+	}
+
+	return btd.bluetoothDevice[device], nil
+}
+
+func (btd *BluetoothDevices) ForEachDevice(f func(*UbloxBluetooth) error) error {
+	var result error = nil
+	for _, ub := range btd.bluetoothDevice {
+		err := f(ub)
+		if err != nil {
+			result = errors.Wrapf(err, "ForEachDevice failed")
+		}
+	}
+	return result
+}
+
+func (btd *BluetoothDevices) SetVerbose(v bool) error {
+	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
+		ub.serialPort.SetVerbose(v)
+		return nil
+	})
+}
+
+// InitUbloxBluetooth creates a new UbloxBluetooth instance
+func InitUbloxBluetooth(timeout time.Duration) (*BluetoothDevices, error) {
+	btd := &BluetoothDevices{}
+	serialPorts, err := serial.GetFTDIDevPaths()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(serialPorts) == 0 {
+		return nil, ErrNoDongles
+	}
+
+	btd.bluetoothDevice = make([]*UbloxBluetooth, 2)
+	for idx, sp := range serialPorts {
+		btd.bluetoothDevice[idx], err = newUbloxBluetooth(sp, timeout)
+	}
+
+	return btd, nil
+}
+
 // NewUbloxBluetooth creates a new UbloxBluetooth instance
-func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
-	sp, err := serial.OpenSerialPort(timeout)
+func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*UbloxBluetooth, error) {
+	sp, err := serial.OpenSerialPort(serialID.SerialPort, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +137,7 @@ func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
 	ub := &UbloxBluetooth{
 		timeout:            timeout,
 		lastCommand:        "",
+		serialID:           serialID,
 		serialPort:         sp,
 		currentMode:        extendedDataMode,
 		StartEventReceived: false,
@@ -142,7 +205,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 func (ub *UbloxBluetooth) ResetSerial() error {
 	ub.serialPort.Close()
 
-	sp, err := serial.OpenSerialPort(ub.timeout)
+	sp, err := serial.OpenSerialPort(ub.serialID.SerialPort, ub.timeout)
 	if err != nil {
 		return err
 	}
@@ -189,7 +252,7 @@ func (ub *UbloxBluetooth) SetCommsRate(rate serial.BaudRate) error {
 
 // SetSerialVerbose sets the debug flag
 func (ub *UbloxBluetooth) SetSerialVerbose(f bool) {
-	serial.SetVerbose(f)
+	ub.serialPort.SetVerbose(f)
 }
 
 // Write writes the data string to Ublox via the SerialPort

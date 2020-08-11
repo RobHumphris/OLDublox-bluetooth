@@ -2,6 +2,7 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -17,7 +18,7 @@ func TestAbort(t *testing.T) {
 	// put some events into the sensors logs (assuming connection events are being logged)
 	for i := 0; i < 20; i++ {
 		fmt.Printf("Connect attempt %d\n", i)
-		errr := connectToDevice("EE9EF8BA058Br", func(t *testing.T) error {
+		errr := connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
 			return ub.DisconnectFromDevice()
 		}, ub, t)
 		if errr != nil {

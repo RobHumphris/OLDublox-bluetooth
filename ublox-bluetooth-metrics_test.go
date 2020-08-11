@@ -2,9 +2,8 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
-
-	serial "github.com/8power/ublox-bluetooth/serial"
 )
 
 func TestRSSICommand(t *testing.T) {
@@ -14,8 +13,8 @@ func TestRSSICommand(t *testing.T) {
 	}
 	defer ub.Close()
 
-	serial.SetVerbose(true)
-	doRSSITest("CE1A0B7E9D79r", ub, t)
+	ub.serialPort.SetVerbose(true)
+	doRSSITest(os.Getenv("DEVICE_MAC"), ub, t)
 
 }
 
@@ -31,17 +30,5 @@ func doRSSITest(address string, ub *UbloxBluetooth, t *testing.T) {
 	}, ub, t)
 	if err != nil {
 		t.Errorf("Connect to device error %v\n", err)
-	}
-}
-
-func TestPeerList(t *testing.T) {
-	ub, err := setupBluetooth()
-	if err != nil {
-		t.Fatalf("setupBluetooth error %v\n", err)
-	}
-	defer ub.Close()
-	err = ub.PeerList()
-	if err != nil {
-		t.Fatalf("PeerList error %v\n", err)
 	}
 }

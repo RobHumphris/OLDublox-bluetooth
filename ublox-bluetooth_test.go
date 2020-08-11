@@ -3,18 +3,19 @@ package ubloxbluetooth
 import (
 	"fmt"
 	"testing"
-
-	serial "github.com/8power/ublox-bluetooth/serial"
 )
 
 func TestATCommand(t *testing.T) {
-	ub, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+
 	defer ub.Close()
 
-	serial.SetVerbose(true)
+	ub.serialPort.SetVerbose(true)
 
 	err = ub.EnterExtendedDataMode()
 	if err != nil {

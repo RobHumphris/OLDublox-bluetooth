@@ -2,9 +2,9 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
-	serial "github.com/8power/ublox-bluetooth/serial"
 	"github.com/fortytw2/leaktest"
 	"github.com/pkg/errors"
 )
@@ -16,14 +16,14 @@ const serviceUUID = "23E1B7EA5F782315A7BEADDE10138888"
 // TestUbloxBluetoothCommands treads through the list of implemented commands
 func TestUbloxBluetoothCommands(t *testing.T) {
 	defer leaktest.Check(t)()
-	serial.SetVerbose(true)
 	ub, err := setupBluetooth()
 	if err != nil {
 		t.Fatalf("setupBluetooth error %v\n", err)
 	}
 	defer ub.Close()
+	ub.serialPort.SetVerbose(true)
 
-	err = connectToDevice("EAA4997A81C4r", func(t *testing.T) error {
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
 		version, err := ub.GetVersion()
 		if err != nil {
 			t.Fatalf("GetVersion error %v\n", err)
@@ -113,7 +113,7 @@ func TestPagedDownloads(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("EE9EF8BA058Br", func(t *testing.T) error {
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
 		defer ub.DisconnectFromDevice()
 
 		err := ub.EnableNotifications()
@@ -126,7 +126,7 @@ func TestPagedDownloads(t *testing.T) {
 			t.Errorf("GetTime error %v\n", err)
 		}
 		fmt.Printf("[GetTime] Current timestamp %d\n", time)
-		serial.SetVerbose(true)
+		ub.serialPort.SetVerbose(true)
 		return err
 	}, ub, t)
 
@@ -144,16 +144,14 @@ func TestAttemptToConnectToMissing(t *testing.T) {
 
 	err = connectToDevice("EEEEEEEEEEEEr", func(t *testing.T) error {
 		defer ub.DisconnectFromDevice()
-		ub.PeerList()
 		return nil
 	}, ub, t)
-	if err != nil {
+	if err.Error() != "Timeout" {
 		t.Errorf("TestReboot error %v\n", err)
 	}
 
-	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
 		defer ub.DisconnectFromDevice()
-		ub.PeerList()
 		return nil
 	}, ub, t)
 	if err != nil {
@@ -168,9 +166,8 @@ func TestRebootUblox(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("EE9EF8BA058Br", func(t *testing.T) error {
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
 		defer ub.DisconnectFromDevice()
-		ub.PeerList()
 		return nil
 	}, ub, t)
 	if err != nil {
@@ -185,10 +182,12 @@ func TestRebootUblox(t *testing.T) {
 }
 
 func setupBluetooth() (*UbloxBluetooth, error) {
-	ub, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "NewUbloxBluetooth error")
 	}
+
+	ub, err := btd.GetDevice(0)
 
 	err = ub.ConfigureUblox(timeout)
 	if err != nil {

@@ -2,9 +2,8 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
-
-	serial "github.com/8power/ublox-bluetooth/serial"
 )
 
 func TestGetVersion(t *testing.T) {
@@ -14,7 +13,7 @@ func TestGetVersion(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
 		defer ub.DisconnectFromDevice()
 
 		v, err := ub.GetVersion()
@@ -36,11 +35,10 @@ func TestConfiguration(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
 		defer ub.DisconnectFromDevice()
-		ub.PeerList()
 
-		serial.SetVerbose(true)
+		ub.serialPort.SetVerbose(true)
 		cfg, err := ub.ReadConfig()
 		if err != nil {
 			t.Errorf("ReadConfig error %v\n", err)
@@ -54,7 +52,7 @@ func TestConfiguration(t *testing.T) {
 			t.Errorf("WriteConfig error %v\n", err)
 		}
 
-		serial.SetVerbose(false)
+		ub.serialPort.SetVerbose(false)
 		v, err := ub.GetVersion()
 		if err != nil {
 			t.Errorf("GetVersion error %v\n", err)

@@ -66,24 +66,24 @@ type UbloxBluetooth struct {
 }
 
 type BluetoothDevices struct {
-	bluetoothDevice []*UbloxBluetooth
+	Bt []*UbloxBluetooth
 }
 
 func (btd *BluetoothDevices) DeviceCount() int {
-	return len(btd.bluetoothDevice)
+	return len(btd.Bt)
 }
 
 func (btd *BluetoothDevices) GetDevice(device int) (*UbloxBluetooth, error) {
-	if device < 0 || device >= len(btd.bluetoothDevice) {
+	if device < 0 || device >= len(btd.Bt) {
 		return nil, ErrBadDeviceIndex
 	}
 
-	return btd.bluetoothDevice[device], nil
+	return btd.Bt[device], nil
 }
 
 func (btd *BluetoothDevices) ForEachDevice(f func(*UbloxBluetooth) error) error {
 	var result error = nil
-	for _, ub := range btd.bluetoothDevice {
+	for _, ub := range btd.Bt {
 		err := f(ub)
 		if err != nil {
 			result = errors.Wrapf(err, "ForEachDevice failed")
@@ -95,6 +95,13 @@ func (btd *BluetoothDevices) ForEachDevice(f func(*UbloxBluetooth) error) error 
 func (btd *BluetoothDevices) SetVerbose(v bool) error {
 	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
 		ub.serialPort.SetVerbose(v)
+		return nil
+	})
+}
+
+func (btd *BluetoothDevices) CloseAll() error {
+	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
+		ub.Close()
 		return nil
 	})
 }
@@ -111,9 +118,9 @@ func InitUbloxBluetooth(timeout time.Duration) (*BluetoothDevices, error) {
 		return nil, ErrNoDongles
 	}
 
-	btd.bluetoothDevice = make([]*UbloxBluetooth, 2)
+	btd.Bt = make([]*UbloxBluetooth, 2)
 	for idx, sp := range serialPorts {
-		btd.bluetoothDevice[idx], err = newUbloxBluetooth(sp, timeout)
+		btd.Bt[idx], err = newUbloxBluetooth(sp, timeout)
 	}
 
 	return btd, nil

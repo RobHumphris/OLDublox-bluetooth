@@ -118,7 +118,7 @@ func InitUbloxBluetooth(timeout time.Duration) (*BluetoothDevices, error) {
 		return nil, ErrNoDongles
 	}
 
-	btd.Bt = make([]*UbloxBluetooth, 2)
+	btd.Bt = make([]*UbloxBluetooth, len(serialPorts))
 	for idx, sp := range serialPorts {
 		btd.Bt[idx], err = newUbloxBluetooth(sp, timeout)
 	}

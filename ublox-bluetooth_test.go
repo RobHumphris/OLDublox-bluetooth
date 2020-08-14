@@ -63,8 +63,32 @@ func TestMultiPortInitialisation(t *testing.T) {
 	for idx, ub := range btd.Bt {
 		sp := ub.GetSerialPort()
 		sn := ub.GetSerialNumber()
+		di := ub.GetDeviceIndex()
 
-		fmt.Printf("BT Dongle %v, %v, %v\n", idx, sp, sn)
+		if int(di) != idx {
+			t.Errorf("Device Index mismatch: %v != %v\n", idx, di)
+		}
+
+		ub2, err := btd.GetDevice(int(di))
+		if err != nil {
+			t.Errorf("GetDevice() error: %v\n", err)
+		}
+
+		if ub2 != ub {
+			t.Errorf("Device handles don't match: %v != %v\n", ub, ub2)
+		}
+
+		fmt.Printf("BT Dongle %v, %v, %v\n", di, sp, sn)
+	}
+
+	_, err = btd.GetDevice(-1)
+	if err == nil || err.Error() != ErrBadDeviceIndex.Error() {
+		t.Errorf("GetDevice() did not return the correct error: %v != %v\n", ErrBadDeviceIndex, err)
+	}
+
+	_, err = btd.GetDevice(btd.DeviceCount())
+	if err == nil || err.Error() != ErrBadDeviceIndex.Error() {
+		t.Errorf("GetDevice() did not return the correct error: %v != %v\n", ErrBadDeviceIndex, err)
 	}
 }
 

@@ -44,10 +44,13 @@ const commandMode ubloxMode = 0
 const dataMode ubloxMode = 1
 const extendedDataMode ubloxMode = 2
 
+var discoveryIndex uint8 = 0
+
 // UbloxBluetooth holds the serial port, and the communication channels.
 type UbloxBluetooth struct {
 	timeout            time.Duration
 	lastCommand        string
+	deviceIndex        uint8
 	serialID           *serial.BtdSerial
 	serialPort         *serial.SerialPort
 	serialNumber       string
@@ -66,14 +69,17 @@ type UbloxBluetooth struct {
 	disconnectExpected bool
 }
 
+// BluetoothDevices Is an slice of dongle handles
 type BluetoothDevices struct {
 	Bt []*UbloxBluetooth
 }
 
+// DeviceCount retrieves the number of bluetooth dongles detected
 func (btd *BluetoothDevices) DeviceCount() int {
 	return len(btd.Bt)
 }
 
+// GetDevice retrieves the handle of the device at index
 func (btd *BluetoothDevices) GetDevice(device int) (*UbloxBluetooth, error) {
 	if device < 0 || device >= len(btd.Bt) {
 		return nil, ErrBadDeviceIndex
@@ -82,6 +88,7 @@ func (btd *BluetoothDevices) GetDevice(device int) (*UbloxBluetooth, error) {
 	return btd.Bt[device], nil
 }
 
+// ForEachDevice iterator function for all devices with callback f
 func (btd *BluetoothDevices) ForEachDevice(f func(*UbloxBluetooth) error) error {
 	var result error = nil
 	for _, ub := range btd.Bt {
@@ -93,6 +100,7 @@ func (btd *BluetoothDevices) ForEachDevice(f func(*UbloxBluetooth) error) error 
 	return result
 }
 
+// SetVerbose on all bluetooth devices
 func (btd *BluetoothDevices) SetVerbose(v bool) error {
 	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
 		ub.serialPort.SetVerbose(v)
@@ -100,6 +108,7 @@ func (btd *BluetoothDevices) SetVerbose(v bool) error {
 	})
 }
 
+// CloseAll bluetooth devices
 func (btd *BluetoothDevices) CloseAll() error {
 	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
 		ub.Close()
@@ -151,6 +160,7 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*Ublo
 	ub := &UbloxBluetooth{
 		timeout:            timeout,
 		lastCommand:        "",
+		deviceIndex:        discoveryIndex,
 		serialID:           serialID,
 		serialPort:         sp,
 		serialNumber:       "",
@@ -164,7 +174,9 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*Ublo
 		ctx:                ctx, //stopScanning:       make(chan bool),
 		cancel:             cancel,
 		connectedDevice:    nil,
-		disconnectCount:    0}
+		disconnectCount:    0,
+	}
+	discoveryIndex++
 
 	sp.SetEDMFlag(true)
 
@@ -474,7 +486,12 @@ func (ub *UbloxBluetooth) GetSerialPort() string {
 	return ub.serialID.SerialPort
 }
 
-//
+// GetSerialNumber retrieves this dongles serial number
 func (ub *UbloxBluetooth) GetSerialNumber() string {
 	return ub.serialNumber
+}
+
+// GetDeviceIndex retrieves this dongles enumeration index number
+func (ub *UbloxBluetooth) GetDeviceIndex() uint8 {
+	return ub.deviceIndex
 }

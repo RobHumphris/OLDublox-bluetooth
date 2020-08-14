@@ -14,6 +14,7 @@ var rs232SettingsResponse = []byte(rs232SettingsResponseString)
 
 const echoOff = "ATE0"
 const storeConfig = "AT&W"
+const getSerialCmd = "+CGSN"
 
 const powerOff = "+CPWROFF"
 const rebootResponseString = "+STARTUP"
@@ -88,6 +89,8 @@ const _FifoCharacteristic = "2456e1b9-26e2-8f83-e744-f34f01e9d703"
 const _CreditsCharacteristic = "2456e1b9-26e2-8f83-e744-f34f01e9d704"
 
 const gattIndicationResponseString = "+UUBTGI:"
+
+const quotedStringResponse = "\""
 
 var ubloxBTReponseHeader = []byte("+UUBT")
 var gattIndicationResponse = []byte(gattIndicationResponseString)

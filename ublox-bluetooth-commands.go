@@ -1,6 +1,7 @@
 package ubloxbluetooth
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -34,6 +35,21 @@ func (ub *UbloxBluetooth) MultipleATCommands() error {
 		e = errors.Wrapf(e, "AT Command error %v", err)
 	}
 	return fmt.Errorf("Failed after 5 attempts %v", e)
+}
+
+// getSerialNumber retrieves the serial number of the dongle
+func (ub *UbloxBluetooth) getSerialNumber() (string, error) {
+	sn, err := ub.writeAndWait(GetSerialCommand(), true)
+	if err != nil {
+		return "", err
+	}
+
+	lines := bytes.Split(sn, []byte("\r\n"))
+	if len(lines) > 0 {
+		return string(lines[0]), nil
+	}
+
+	return "Unknown", nil
 }
 
 // EchoOff requests that the ublox device is a little less noisy

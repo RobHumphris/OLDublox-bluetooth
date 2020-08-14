@@ -3,6 +3,7 @@ package ubloxbluetooth
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,7 +54,21 @@ func TestATCommand(t *testing.T) {
 	}
 }
 
-func TestMultiATCommand(t *testing.T) {
+func TestMultiPortInitialisation(t *testing.T) {
+	btd, err := InitUbloxBluetooth(timeout)
+	if err != nil {
+		t.Fatalf("InitUbloxBluetooth error %v", err)
+	}
+
+	for idx, ub := range btd.Bt {
+		sp := ub.GetSerialPort()
+		sn := ub.GetSerialNumber()
+
+		fmt.Printf("BT Dongle %v, %v, %v\n", idx, sp, sn)
+	}
+}
+
+func TestDualATControl(t *testing.T) {
 	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
@@ -140,5 +155,36 @@ func TestMultiATCommand(t *testing.T) {
 		//btd.CloseAll()
 	} else {
 		t.Errorf("This test needs two EVKs/EH750s plugged in to work")
+	}
+}
+
+func TestGetSerialNumber(t *testing.T) {
+	btd, err := InitUbloxBluetooth(timeout)
+	if err != nil {
+		t.Fatalf("InitUbloxBluetooth error %v", err)
+	}
+
+	ub, err := btd.GetDevice(0)
+
+	defer ub.Close()
+
+	ub.serialPort.SetVerbose(true)
+
+	sn, err := ub.getSerialNumber()
+	if err != nil {
+		t.Errorf("AT error %v\n", err)
+	}
+	fmt.Printf("Serial No: %v\n", sn)
+
+	err = ub.ATCommand()
+	if err != nil {
+		t.Errorf("AT error %v\n", err)
+	}
+
+	sn2 := ub.GetSerialNumber()
+
+	sn = strings.Trim(sn, "\"")
+	if sn != sn2 {
+		t.Errorf("Serial number mismatch: %v != %v\n", sn, sn2)
 	}
 }

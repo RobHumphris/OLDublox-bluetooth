@@ -69,6 +69,9 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 		switch data[0] {
 		case '+':
 			ub.DataChannel <- data
+		case '"':
+			ub.DataChannel <- data[:len(data)-2]
+			ub.CompletedChannel <- true
 		default:
 			ub.handleGeneralMessage(data)
 		}

@@ -235,3 +235,11 @@ func IssueEscapeSequence() CmdResp {
 		Resp: empty,
 	}
 }
+
+// GetSerialCommand creates the command
+func GetSerialCommand() CmdResp {
+	return CmdResp{
+		Cmd:  at + getSerialCmd,
+		Resp: quotedStringResponse,
+	}
+}

@@ -50,6 +50,7 @@ type UbloxBluetooth struct {
 	lastCommand        string
 	serialID           *serial.BtdSerial
 	serialPort         *serial.SerialPort
+	serialNumber       string
 	currentMode        ubloxMode
 	StartEventReceived bool
 	readChannel        chan []byte
@@ -123,6 +124,12 @@ func InitUbloxBluetooth(timeout time.Duration) (*BluetoothDevices, error) {
 		btd.Bt[idx], err = newUbloxBluetooth(sp, timeout)
 	}
 
+	for _, ub := range btd.Bt {
+		// read the serial number
+		ub.serialNumber, err = ub.getSerialNumber()
+		ub.serialNumber = strings.Trim(ub.serialNumber, "\"")
+	}
+
 	return btd, nil
 }
 
@@ -146,6 +153,7 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*Ublo
 		lastCommand:        "",
 		serialID:           serialID,
 		serialPort:         sp,
+		serialNumber:       "",
 		currentMode:        extendedDataMode,
 		StartEventReceived: false,
 		readChannel:        make(chan []byte),
@@ -459,4 +467,14 @@ func (ub *UbloxBluetooth) handleGeneralMessage(b []byte) {
 
 func (ub *UbloxBluetooth) handleUnknownPayload(t string, p string) {
 	ub.ErrorChannel <- fmt.Errorf("Unknown token %s payload %s", t, p)
+}
+
+// GetSerialPort retrieves the serial port
+func (ub *UbloxBluetooth) GetSerialPort() string {
+	return ub.serialID.SerialPort
+}
+
+//
+func (ub *UbloxBluetooth) GetSerialNumber() string {
+	return ub.serialNumber
 }

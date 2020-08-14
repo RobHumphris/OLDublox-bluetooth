@@ -129,6 +129,7 @@ func (ub *UbloxBluetooth) DiscoveryCommand(timestamp int32, scantime time.Durati
 func (ub *UbloxBluetooth) handleDiscovery(expResp string, timestamp int32, fn DiscoveryReplyCallback) error {
 	return ub.HandleDiscovery(expResp, func(d []byte) (bool, error) {
 		dr, err := ProcessDiscoveryReply(d)
+		dr.DongleIndex = ub.GetDeviceIndex()
 		if err == nil {
 			err = fn(dr, timestamp)
 		} else if err != ErrUnexpectedResponse {

@@ -16,6 +16,7 @@ var ErrNotConnected = fmt.Errorf("Not Connected")
 // DiscoveryReply BLE discovery structure
 type DiscoveryReply struct {
 	BluetoothAddress string
+	DongleIndex      uint8
 	Rssi             int
 	DeviceName       string
 	DataType         int

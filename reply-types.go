@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -21,6 +22,7 @@ type DiscoveryReply struct {
 	DeviceName       string
 	DataType         int
 	Data             string
+	Timestamp        int64
 }
 
 // NewDiscoveryReply takes the string and converts it to a DiscoveryReply
@@ -46,6 +48,7 @@ func NewDiscoveryReply(d string) (*DiscoveryReply, error) {
 		DeviceName:       t[2],
 		DataType:         dataType,
 		Data:             t[4],
+		Timestamp:        time.Now().Unix(),
 	}, nil
 }
 

@@ -220,7 +220,7 @@ func setupBluetooth() (*UbloxBluetooth, error) {
 type TestFunc func(*testing.T) error
 
 func connectToDevice(mac string, tfn TestFunc, ub *UbloxBluetooth, t *testing.T) error {
-	return ub.ConnectToDevice(mac, func() error {
+	return ub.ConnectToDevice(mac, func(ub *UbloxBluetooth) error {
 		err := ub.EnableNotifications()
 		if err != nil {
 			t.Fatalf("EnableNotifications error %v\n", err)
@@ -240,7 +240,7 @@ func connectToDevice(mac string, tfn TestFunc, ub *UbloxBluetooth, t *testing.T)
 		}
 
 		return tfn(t)
-	}, func() error {
+	}, func(ub *UbloxBluetooth) error {
 		fmt.Println("Disconnected!")
 		return nil
 	})

@@ -51,7 +51,7 @@ func TestDoubleDisconnect(t *testing.T) {
 	ub.serialPort.SetVerbose(true)
 
 	for i := 0; i < 2; i++ {
-		ub.ConnectToDevice(os.Getenv("DEVICE_MAC"), func() error {
+		ub.ConnectToDevice(os.Getenv("DEVICE_MAC"), func(ub *UbloxBluetooth) error {
 			err := ub.EnableIndications()
 			if err != nil {
 				t.Errorf("[EnableIndications] %v\n", err)
@@ -83,14 +83,14 @@ func TestDoubleDisconnect(t *testing.T) {
 				t.Errorf("[DisconnectFromDevice] Second %v\n", err)
 			}
 			return nil
-		}, func() error {
+		}, func(ub *UbloxBluetooth) error {
 			return fmt.Errorf("disconnected")
 		})
 	}
 }
 
 func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
-	return ub.ConnectToDevice(deviceAddr, func() error {
+	return ub.ConnectToDevice(deviceAddr, func(ub *UbloxBluetooth) error {
 		defer ub.DisconnectFromDevice()
 		ub.serialPort.SetVerbose(false)
 
@@ -132,7 +132,7 @@ func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
 		fmt.Printf("[ReadConfig] replied with: %v\n", config)
 
 		return nil
-	}, func() error {
+	}, func(ub *UbloxBluetooth) error {
 		return fmt.Errorf("disconnected")
 	})
 }

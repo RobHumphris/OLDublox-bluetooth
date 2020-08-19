@@ -179,7 +179,7 @@ func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent,
 	ub.disconnectHandler = onDisconnect
 	ub.disconnectExpected = false
 	ub.disconnectCount = 0
-	return onConnect()
+	return onConnect(ub)
 }
 
 // DisconnectFromDevice issues the disconnect command using the handle from the ConnectionReply

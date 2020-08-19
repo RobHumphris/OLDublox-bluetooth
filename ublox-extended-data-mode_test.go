@@ -49,7 +49,7 @@ func TestExtendedDataMode(t *testing.T) {
 
 func workflowTest(mac string, itteration int, ub *UbloxBluetooth) error {
 	err := ub.ConnectToDevice(mac,
-		func() error {
+		func(ub *UbloxBluetooth) error {
 			fmt.Printf("Workflow Test run: %d\n", itteration)
 			err := ub.EnableNotifications()
 			if err != nil {
@@ -71,7 +71,7 @@ func workflowTest(mac string, itteration int, ub *UbloxBluetooth) error {
 
 			return ub.DisconnectFromDevice()
 		},
-		func() error {
+		func(ub *UbloxBluetooth) error {
 			fmt.Printf("Unexpected disconnect")
 			return fmt.Errorf("Unexpected disconnect")
 		})

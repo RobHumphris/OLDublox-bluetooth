@@ -61,7 +61,7 @@ func TestMultipleConnects(t *testing.T) {
 
 func doConnect(ub *UbloxBluetooth, mac string, count int) error {
 	st := time.Now().UnixNano()
-	err := ub.ConnectToDevice(mac, func() error {
+	err := ub.ConnectToDevice(mac, func(ub *UbloxBluetooth) error {
 		defer ub.DisconnectFromDevice()
 		tt := time.Now().UnixNano() - st
 		fmt.Printf("Connection delay: %dns\n", tt)
@@ -83,7 +83,7 @@ func doConnect(ub *UbloxBluetooth, mac string, count int) error {
 			return errors.Wrapf(err, "UnlockDevice mac: %s count: %d\n", mac, count)
 		}
 		return nil
-	}, func() error {
+	}, func(ub *UbloxBluetooth) error {
 		return fmt.Errorf("Disconnected")
 	})
 	if err != nil {

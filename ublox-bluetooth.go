@@ -36,7 +36,7 @@ type Discoveryhandler func([]byte) (bool, error)
 type DataMessageHandler func([]byte) (bool, error)
 
 // DeviceEvent functions are called and defined in various events e.g. Connect, Disconnect
-type DeviceEvent func() error
+type DeviceEvent func(*UbloxBluetooth) error
 
 type ubloxMode int
 

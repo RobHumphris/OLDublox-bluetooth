@@ -6,6 +6,7 @@ import (
 	"math"
 )
 
+// VEH Sensor event types
 const (
 	VehEventBoot         = 0x00
 	VehEventSensor       = 0x02

@@ -127,16 +127,20 @@ var ErrorContextCancelled = fmt.Errorf("Context Cancelled")
 
 // MultiDiscoverWithContext runs scans on all devices in parallel
 func (btd *BluetoothDevices) MultiDiscoverWithContext(ctx context.Context, scantime time.Duration, drChan chan *DiscoveryReply) error {
-	errChan := make(chan error, btd.DeviceCount())
+	var err error
+	noOfDevices := btd.DeviceCount()
+	errChan := make(chan error, noOfDevices)
 
 	btd.ForEachDevice(func(ub *UbloxBluetooth) error {
 		go ub.discoveryCommandWithContext(ctx, scantime, drChan, errChan)
 		return nil
 	})
 
-	err := btd.ForEachDevice(func(ub *UbloxBluetooth) error {
-		return <-errChan
-	})
+	// Don't concatenate errors. We need to spot the ContextCancelled error
+	err = <-errChan
+	if noOfDevices == 2 {
+		err = <-errChan
+	}
 
 	return err
 }

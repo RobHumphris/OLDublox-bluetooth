@@ -20,7 +20,7 @@ var ErrTimeout = fmt.Errorf("Timeout")
 // ErrNoDongles No EH750's detected
 var ErrNoDongles = fmt.Errorf("No EH750's located")
 
-// ErrBadDeviceIndex
+// ErrBadDeviceIndex bad device index
 var ErrBadDeviceIndex = fmt.Errorf("Bad device index")
 
 // DataResponse holds the Token at the start of the reply, and the subsequent data bytes

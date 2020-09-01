@@ -2,10 +2,10 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
-	serial "github.com/8power/ublox-bluetooth/serial"
 	"github.com/pkg/errors"
 )
 
@@ -16,8 +16,8 @@ func TestWriteMessage(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
-		serial.SetVerbose(true)
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
+		ub.serialPort.SetVerbose(true)
 		e := ub.WriteMessage(fmt.Sprintf("Message at %d", time.Now().Unix()))
 		if e != nil {
 			return errors.Wrap(e, "WriteMessage error")

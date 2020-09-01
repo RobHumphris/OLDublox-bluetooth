@@ -13,23 +13,22 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var verbose = false
 var newlineBytes = []byte{'\r', '\n'}
 
 // SetVerbose sets the logging level
-func SetVerbose(v bool) {
-	verbose = v
+func (sp *SerialPort) SetVerbose(v bool) {
+	sp.verbose = v
 }
 
-func showOutMsg(b []byte) {
-	if verbose {
+func (sp *SerialPort) showOutMsg(b []byte) {
+	if sp.verbose {
 		l := len(b) - 2
 		fmt.Printf("-> %s\n", b[5:l])
 	}
 }
 
-func showInMsg(b []byte) {
-	if verbose {
+func (sp *SerialPort) showInMsg(b []byte) {
+	if sp.verbose {
 		l := len(b) - 3
 		if l > 7 {
 			fmt.Printf("<- %s\n", b[7:l])
@@ -47,6 +46,7 @@ type SerialPort struct {
 	contineScanning  bool
 	isOpen           bool
 	byteBuf          []byte
+	verbose          bool
 }
 
 // BaudRate is a type used for enumerating the permissible rates in our system.
@@ -59,13 +59,8 @@ const (
 	HighSpeed BaudRate = unix.B1000000
 )
 
-// OpenSerialPort opens the Ublox device with a timeout value
-func OpenSerialPort(readTimeout time.Duration) (p *SerialPort, err error) {
-	devPath, err := GetFTDIDevPath()
-	if err != nil {
-		return nil, err
-	}
-
+// OpenSerialPort opens a Ublox device with a timeout value
+func OpenSerialPort(devPath string, readTimeout time.Duration) (p *SerialPort, err error) {
 	f, err := os.OpenFile(devPath, unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0666)
 	if err != nil {
 		return nil, err
@@ -92,6 +87,7 @@ func OpenSerialPort(readTimeout time.Duration) (p *SerialPort, err error) {
 		contineScanning:  true,
 		isOpen:           true,
 		byteBuf:          make([]byte, 1),
+		verbose:          false,
 	}
 
 	sp.SetBaudRate(HighSpeed, readTimeout)
@@ -134,7 +130,7 @@ func (sp *SerialPort) SetBaudRate(baudrate BaudRate, readTimeout time.Duration) 
 
 // Write write's the passed byte array to the serial port
 func (sp *SerialPort) Write(b []byte) error {
-	showOutMsg(b)
+	sp.showOutMsg(b)
 	_, err := sp.file.Write(b)
 	return err
 }
@@ -204,7 +200,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 					expectedLength = int(binary.BigEndian.Uint16(line[1:3])) + EDMPayloadOverhead
 				} else if lineLen == expectedLength {
 					if line[expectedLength-1] == EDMStopByte {
-						showInMsg(line)
+						sp.showInMsg(line)
 						edmChan <- line[EDMHeaderSize:expectedLength]
 						line = []byte{}
 						expectedLength = -1
@@ -222,7 +218,7 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 			lineLen = len(line)
 			if bytes.HasSuffix(line, newlineBytes) {
 				if lineLen > 2 {
-					showInMsg(line)
+					sp.showInMsg(line)
 					dataChan <- line
 				}
 				line = []byte{}

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"testing"
-
-	serial "github.com/8power/ublox-bluetooth/serial"
 )
 
 var bt *UbloxBluetooth
@@ -16,18 +14,21 @@ func handleFatal(s string, err error) {
 }
 
 func TestResetWatchdog(t *testing.T) {
-	bt, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		handleFatal("NewUbloxBluetooth error", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+
 	defer bt.Close()
 
-	err = bt.ATCommand()
+	err = ub.ATCommand()
 	if err != nil {
 		handleFatal("AT - 0 error", err)
 	}
 
-	err = bt.ResetWatchdogConfiguration()
+	err = ub.ResetWatchdogConfiguration()
 	if err != nil {
 		fmt.Printf("ResetWatchdogConfiguration error %v\n", err)
 	}
@@ -35,18 +36,21 @@ func TestResetWatchdog(t *testing.T) {
 }
 
 func TestSetWatchdog(t *testing.T) {
-	bt, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		handleFatal("NewUbloxBluetooth error", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
-	defer bt.Close()
 
-	err = bt.ATCommand()
+	ub, err := btd.GetDevice(0)
+
+	defer ub.Close()
+
+	err = ub.ATCommand()
 	if err != nil {
 		handleFatal("AT - 0 error", err)
 	}
 
-	err = bt.SetWatchdogConfiguration()
+	err = ub.SetWatchdogConfiguration()
 	if err != nil {
 		fmt.Printf("ResetWatchdogConfiguration error %v\n", err)
 	}
@@ -55,17 +59,20 @@ func TestSetWatchdog(t *testing.T) {
 
 func TestRestartViaDTR(t *testing.T) {
 	var err error
-	serial.SetVerbose(true)
 
-	bt, err = NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		handleFatal("NewUbloxBluetooth error", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+
 	defer bt.Close()
+	ub.serialPort.SetVerbose(true)
 
-	bt.ResetUblox()
+	ub.ResetUblox()
 
-	err = bt.ATCommand()
+	err = ub.ATCommand()
 	if err != nil {
 		handleFatal("AT - 0 error", err)
 	}
@@ -73,15 +80,17 @@ func TestRestartViaDTR(t *testing.T) {
 
 func TestRestart(t *testing.T) {
 	var err error
-	serial.SetVerbose(true)
-
-	bt, err = NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		handleFatal("NewUbloxBluetooth error", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
-	defer bt.Close()
 
-	err = bt.ATCommand()
+	ub, err := btd.GetDevice(0)
+
+	defer bt.Close()
+	ub.serialPort.SetVerbose(true)
+
+	err = ub.ATCommand()
 	if err != nil {
 		handleFatal("AT - 0 error", err)
 	}
@@ -91,22 +100,22 @@ func TestRestart(t *testing.T) {
 		handleFatal("EnterExtendedDataMode error", err)
 	}*/
 
-	err = bt.ATCommand()
+	err = ub.ATCommand()
 	if err != nil {
 		handleFatal("AT - 1 error", err)
 	}
 
-	err = bt.RebootUblox()
+	err = ub.RebootUblox()
 	if err != nil {
 		handleFatal("RebootUblox error", err)
 	}
 
-	err = bt.EnterExtendedDataMode()
+	err = ub.EnterExtendedDataMode()
 	if err != nil {
 		handleFatal("EnterExtendedDataMode error", err)
 	}
 
-	err = bt.MultipleATCommands()
+	err = ub.MultipleATCommands()
 	if err != nil {
 		handleFatal("AT - 2 error", err)
 	}

@@ -41,14 +41,31 @@ func NewEDMATCommand(atCommand string) []byte {
 	return NewEMDCmdBytes(b)
 }
 
+// ConnectEvent message id
 const ConnectEvent = byte(0x11)
+
+// DisconnectEvent message id
 const DisconnectEvent = byte(0x21)
+
+// DataEvent message id
 const DataEvent = byte(0x31)
+
+// ATRequest message id
 const ATRequest = byte(0x44)
+
+// ATConfirmation message id
 const ATConfirmation = byte(0x45)
+
+// ATEvent message id
 const ATEvent = byte(0x41)
+
+// ResentConnect message id
 const ResentConnect = byte(0x56)
+
+// iPhoneEvent message id
 const iPhoneEvent = byte(0x61)
+
+// StartEvent message id
 const StartEvent = byte(0x71)
 
 func removeNewlines(data []byte) []byte {
@@ -69,6 +86,9 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 		switch data[0] {
 		case '+':
 			ub.DataChannel <- data
+		case '"':
+			ub.DataChannel <- data[:len(data)-2]
+			ub.CompletedChannel <- true
 		default:
 			ub.handleGeneralMessage(data)
 		}

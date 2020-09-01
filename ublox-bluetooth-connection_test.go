@@ -2,10 +2,10 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
-	serial "github.com/8power/ublox-bluetooth/serial"
 	retry "github.com/avast/retry-go"
 	"github.com/fortytw2/leaktest"
 	"github.com/pkg/errors"
@@ -13,12 +13,15 @@ import (
 
 func TestMultipleConnects(t *testing.T) {
 	defer leaktest.Check(t)()
-	serial.SetVerbose(false)
-	ub, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+
 	//defer ub.Close()
+	ub.serialPort.SetVerbose(true)
 
 	err = ub.ConfigureUblox(timeout)
 	if err != nil {
@@ -44,7 +47,7 @@ func TestMultipleConnects(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		err = retry.Do(func() error {
 			fmt.Printf("%03d ", i)
-			e := doConnect(ub, "CE1A0B7E9D79r", i)
+			e := doConnect(ub, os.Getenv("DEVICE_MAC"), i)
 			if e != nil {
 				fmt.Printf("doConnect error %v", err)
 			}
@@ -58,7 +61,7 @@ func TestMultipleConnects(t *testing.T) {
 
 func doConnect(ub *UbloxBluetooth, mac string, count int) error {
 	st := time.Now().UnixNano()
-	err := ub.ConnectToDevice(mac, func() error {
+	err := ub.ConnectToDevice(mac, func(ub *UbloxBluetooth) error {
 		defer ub.DisconnectFromDevice()
 		tt := time.Now().UnixNano() - st
 		fmt.Printf("Connection delay: %dns\n", tt)
@@ -80,7 +83,7 @@ func doConnect(ub *UbloxBluetooth, mac string, count int) error {
 			return errors.Wrapf(err, "UnlockDevice mac: %s count: %d\n", mac, count)
 		}
 		return nil
-	}, func() error {
+	}, func(ub *UbloxBluetooth) error {
 		return fmt.Errorf("Disconnected")
 	})
 	if err != nil {

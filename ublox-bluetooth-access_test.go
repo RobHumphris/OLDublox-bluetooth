@@ -2,10 +2,10 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
-	serial "github.com/8power/ublox-bluetooth/serial"
 	"github.com/google/martian/log"
 )
 
@@ -40,15 +40,18 @@ func accessDevice(ub *UbloxBluetooth, mac string) error {
 }
 
 func TestDoubleDisconnect(t *testing.T) {
-	serial.SetVerbose(false)
-	ub, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+
 	defer ub.Close()
+	ub.serialPort.SetVerbose(true)
 
 	for i := 0; i < 2; i++ {
-		ub.ConnectToDevice("F189B7AEC003r", func() error {
+		ub.ConnectToDevice(os.Getenv("DEVICE_MAC"), func(ub *UbloxBluetooth) error {
 			err := ub.EnableIndications()
 			if err != nil {
 				t.Errorf("[EnableIndications] %v\n", err)
@@ -76,20 +79,20 @@ func TestDoubleDisconnect(t *testing.T) {
 			}
 
 			err = ub.DisconnectFromDevice()
-			if err != nil {
+			if err != nil && err.Error() != "ConnectionReply is nil" {
 				t.Errorf("[DisconnectFromDevice] Second %v\n", err)
 			}
 			return nil
-		}, func() error {
+		}, func(ub *UbloxBluetooth) error {
 			return fmt.Errorf("disconnected")
 		})
 	}
 }
 
 func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
-	serial.SetVerbose(true)
-	return ub.ConnectToDevice(deviceAddr, func() error {
+	return ub.ConnectToDevice(deviceAddr, func(ub *UbloxBluetooth) error {
 		defer ub.DisconnectFromDevice()
+		ub.serialPort.SetVerbose(false)
 
 		err := ub.EnableIndications()
 		if err != nil {
@@ -129,47 +132,52 @@ func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
 		fmt.Printf("[ReadConfig] replied with: %v\n", config)
 
 		return nil
-	}, func() error {
+	}, func(ub *UbloxBluetooth) error {
 		return fmt.Errorf("disconnected")
 	})
 }
 
 func TestSingleAccess(t *testing.T) {
-	serial.SetVerbose(true)
-	ub, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+
 	defer ub.Close()
+	ub.serialPort.SetVerbose(true)
 
 	err = ub.ATCommand()
 	if err != nil {
 		t.Errorf("AT error %v\n", err)
 	}
 
-	accessDevice(ub, "CE1A0B7E9D79r")
+	accessDevice(ub, os.Getenv("DEVICE_MAC"))
 
 }
 
 func TestMulipleAccesses(t *testing.T) {
-	serial.SetVerbose(true)
-
-	ub, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+
 	defer ub.Close()
+	ub.serialPort.SetVerbose(true)
 
 	err = ub.ATCommand()
 	if err != nil {
-		t.Errorf("AT error %v\n", err)
+		t.Errorf("AT errors")
 	}
 
 	for i := 0; i < 10; i++ {
 		//fmt.Printf("Starting Access test %d\n", i)
 		//t.Fatalf("NEED MORE v2.0 sensors")
 		//accessDevice(ub, "C1851F6083F8r")
-		accessDevice(ub, "CE1A0B7E9D79r")
+		accessDevice(ub, os.Getenv("DEVICE_MAC"))
 		//accessDevice(ub, "D8CFDFA118ECr")
 	}
 }

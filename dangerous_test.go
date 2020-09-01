@@ -1,21 +1,50 @@
 package ubloxbluetooth
 
 import (
+	"os"
 	"testing"
-
-	"github.com/8power/ublox-bluetooth/serial"
 
 	"github.com/pkg/errors"
 )
 
-func TestSettingDTRAction(t *testing.T) {
-	ub, err := NewUbloxBluetooth(timeout)
+func TestSettingDTR(t *testing.T) {
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+
 	defer ub.Close()
 
-	serial.SetVerbose(true)
+	ub.serialPort.SetVerbose(true)
+	err = ub.SetDTRBehavior()
+	if err != nil {
+		t.Fatalf("SetDTRBehavior error %v", err)
+	}
+
+	err = ub.RebootUblox()
+	if err != nil {
+		t.Fatalf("RebootUblox error %v", err)
+	}
+
+	err = ub.ResetUblox()
+	if err != nil {
+		t.Fatalf("SetDTRBehavior error %v", err)
+	}
+}
+
+func TestSettingDTRAction(t *testing.T) {
+	btd, err := InitUbloxBluetooth(timeout)
+	if err != nil {
+		t.Fatalf("InitUbloxBluetooth error %v", err)
+	}
+
+	ub, err := btd.GetDevice(0)
+
+	defer ub.Close()
+
+	ub.serialPort.SetVerbose(true)
 	err = ub.MultipleATCommands()
 	if err != nil {
 		t.Fatalf("MultipleATCommands error %v", err)
@@ -38,11 +67,13 @@ func TestSettingDTRAction(t *testing.T) {
 }
 
 func TestDongleReboot(t *testing.T) {
-	serial.SetVerbose(true)
-	ub, err := NewUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
+
+	ub, err := btd.GetDevice(0)
+	ub.serialPort.SetVerbose(true)
 	defer ub.Close()
 }
 
@@ -53,8 +84,8 @@ func TestRebootRecorder(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
-		serial.SetVerbose(true)
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
+		ub.serialPort.SetVerbose(true)
 		e := ub.RebootRecorder()
 		if e != nil {
 			return errors.Wrap(e, "RebootRecorder error")
@@ -79,8 +110,8 @@ func TestErase(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
-		serial.SetVerbose(true)
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
+		ub.serialPort.SetVerbose(true)
 		e := ub.EraseRecorder()
 		if e != nil {
 			return errors.Wrap(e, "EraseRecorder error")

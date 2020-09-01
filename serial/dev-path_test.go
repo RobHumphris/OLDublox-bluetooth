@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetFTDIDevPath(t *testing.T) {
-	path, err := GetFTDIDevPath()
+	path, err := GetFTDIDevPaths()
 	if err != nil {
 		t.Errorf("GetFTDIDevPath failed: %v\n", err)
 	}

@@ -2,6 +2,7 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ func TestTimeFunctions(t *testing.T) {
 	}
 	defer ub.Close()
 
-	err = connectToDevice("CE1A0B7E9D79r", func(t *testing.T) error {
+	err = connectToDevice(os.Getenv("DEVICE_MAC"), func(t *testing.T) error {
 		currentTime := int32(time.Now().Unix())
 		deviceTime, err := ub.GetTime()
 		if err != nil {

@@ -30,6 +30,10 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		}
 		fmt.Printf("[GetVersion] replied with: %v\n", version)
 
+		if version.SoftwareVersion != "2.5" {
+			t.Fatalf("Cannot continue with version %s, needs to be 2.5\n", version.SoftwareVersion)
+		}
+
 		serialNumber, err := ub.ReadSerialNumber()
 		if err != nil {
 			t.Fatalf("ReadSerialNumber error %v\n", err)
@@ -42,10 +46,6 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 			t.Errorf("GetTime error %v\n", err)
 		}
 		fmt.Printf("[GetTime] Current timestamp %d\n", time)
-
-		/*if version.SoftwareVersion != "3.0" {
-			t.Fatalf("Cannot continue with version %s, needs to be 2.1\n", version.SoftwareVersion)
-		}*/
 
 		config, err := ub.ReadConfig()
 		if err != nil {
@@ -65,10 +65,21 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		}
 		fmt.Printf("[ReadRecorderInfo] SequenceNo: %d. Count: %d. SlotUsage: %d. PoolUsage: %d.\n", info.SequenceNo, info.Count, info.SlotUsage, info.PoolUsage)
 
+		err = ub.ReadRecorder(99999, func(e *VehEvent) error {
+			t.Errorf("This should have returned an Error as we're unlike to have got to slot 99999\n")
+			return nil
+		})
+		if err != nil {
+			if err != ErrorSensorErrorResponse {
+				t.Errorf("Should have raised ErrorSensorErrorResponse not: %v\n", err)
+			} else {
+				fmt.Println("ErrorSensorErrorResponse correctly returned")
+			}
+		}
+
 		var lastSequenceRead uint32
 		dataSequences := []uint32{}
-
-		err = ub.ReadRecorder(0, func(e *VehEvent) error {
+		err = ub.ReadRecorder(info.SequenceNo, func(e *VehEvent) error {
 			fmt.Printf("Sequence: %d\n", e.Sequence)
 			lastSequenceRead = e.Sequence
 			if e.DataFlag {
@@ -182,6 +193,7 @@ func TestRebootUblox(t *testing.T) {
 }
 
 func setupBluetooth() (*UbloxBluetooth, error) {
+	os.Setenv("DEVICE_MAC", "EAA4997A81C4r")
 	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "NewUbloxBluetooth error")

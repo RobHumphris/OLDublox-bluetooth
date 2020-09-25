@@ -300,22 +300,29 @@ func (ub *UbloxBluetooth) ReadRecorder(sequence uint32, fn func(*VehEvent) error
 	return err
 }
 
-func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string, lengthOffset int, reply string, dnh func([]byte) error, dih func([]byte) error) error {
-	if ub.connectedDevice == nil {
-		return ErrNotConnected
-	}
+func (ub *UbloxBluetooth) ReadSensorEventSlot(sequence uint32) (*VehEvent, error) {
+	slot := &VehEvent{}
+	commandParameters := fmt.Sprintf("%s%s", uint32ToString(sequence), defaultCreditString)
+	err := ub.downloadData(readRecorderCommand, commandParameters, readRecorderOffset, readRecorderReply, func(d []byte) error {
+		if d != nil {
+			b, err := hex.DecodeString(string(d))
+			if err != nil {
+				return errors.Wrap(err, "DecodeString error")
+			}
+			slot, err = NewRecorderEvent(b)
+			if err != nil {
+				return errors.Wrap(err, "NewRecorderEvent error")
+			}
 
-	c := ub.newCharacteristicHexCommand(commandValueHandle, command, commandParameters)
-	d, err := ub.writeAndWait(writeCharacteristicHexCommand(c), true)
+		}
+		return nil
+	}, func(d []byte) error {
+		return nil
+	})
 	if err != nil {
-		return errors.Wrap(err, "[downloadData] Command error")
+		return nil, errors.Wrap(err, "downloadData error")
 	}
-
-	t, err := splitOutResponse(d, reply)
-	if err != nil {
-		return errors.Wrap(err, "[downloadData] processEventsReply error")
-	}
-	return ub.HandleDataDownload(stringToInt(t[lengthOffset-4:]), reply, dnh, dih)
+	return slot, nil
 }
 
 // QueryRecorderMetaDataCommand gets the
@@ -337,8 +344,8 @@ func (ub *UbloxBluetooth) QueryRecorderMetaDataCommand(sequence uint32) (*Record
 	return ProcessQueryRecorderMetaDataReply(d)
 }
 
-// ReadRecorderDataCommand issues the readRecorderDataCommand and handles the onslaught of data thats returned
-func (ub *UbloxBluetooth) ReadRecorderDataCommand(sequence uint32, md *RecorderMetaDataReply) ([]byte, error) {
+// ReadSensorEventPool issues the readRecorderDataCommand and handles the onslaught of data thats returned
+func (ub *UbloxBluetooth) ReadSensorEventPool(sequence uint32) ([]byte, error) {
 	data := []byte{}
 	commandParameters := fmt.Sprintf("%s%s", uint32ToString(sequence), defaultCreditString)
 	err := ub.downloadData(readRecorderDataCommand, commandParameters, readRecorderDataOffset, readRecorderDataReply, func(d []byte) error {
@@ -368,4 +375,25 @@ func (ub *UbloxBluetooth) GetRSSI() (*RSSIReply, error) {
 		return nil, errors.Wrapf(err, "GetRSSI error")
 	}
 	return NewRSSIReply(d)
+}
+
+func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string, lengthOffset int, reply string, dnh func([]byte) error, dih func([]byte) error) error {
+	if ub.connectedDevice == nil {
+		return ErrNotConnected
+	}
+
+	c := ub.newCharacteristicHexCommand(commandValueHandle, command, commandParameters)
+	d, err := ub.writeAndWait(writeCharacteristicHexCommand(c), true)
+	if err != nil {
+		return errors.Wrap(err, "[downloadData] Command error")
+	}
+
+	t, err := splitOutResponse(d, reply)
+	if err != nil {
+		if err == ErrorSensorErrorResponse {
+			return err
+		}
+		return errors.Wrap(err, "[downloadData] processEventsReply error")
+	}
+	return ub.HandleDataDownload(stringToInt(t[lengthOffset-4:]), reply, dnh, dih)
 }

@@ -115,7 +115,7 @@ func (ub *UbloxBluetooth) handleDiscovery(expResp string, drChan chan *Discovery
 		dr.DongleIndex = ub.GetDeviceIndex()
 		if err == nil {
 			drChan <- dr
-		} else if err != ErrUnexpectedResponse {
+		} else if err != ErrorUnexpectedResponse {
 			return false, err
 		}
 		return true, nil

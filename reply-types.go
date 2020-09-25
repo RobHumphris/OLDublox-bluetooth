@@ -69,7 +69,7 @@ func NewRS232SettingsReply(d string) (*RS232SettingsReply, error) {
 
 	tokens := strings.Split(d, ",")
 	if len(tokens) < 3 {
-		return nil, fmt.Errorf("unknown response")
+		return nil, ErrorUnknownResponse
 	}
 
 	rsRply.BaudRate, err = strconv.Atoi(tokens[0])

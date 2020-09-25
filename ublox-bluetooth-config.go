@@ -72,10 +72,10 @@ func (ub *UbloxBluetooth) ConfigureUblox(connectionTimeout time.Duration) error 
 		return errors.Wrap(err, "Error configuring BLECentral")
 	}
 
-	_, err = ub.writeAndWait(BLEConfig(minConnectionInterval, 24), false)
+	/*_, err = ub.writeAndWait(BLEConfig(minConnectionInterval, 24), false)
 	if err != nil {
 		return errors.Wrap(err, "Error configuring minConnectionInterval")
-	}
+	}*/
 
 	_, err = ub.writeAndWait(BLEConfig(maxConnectionInterval, 40), false)
 	if err != nil {

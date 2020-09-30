@@ -27,6 +27,11 @@ func (sp *SerialPort) showOutMsg(b []byte) {
 	}
 }
 
+// GetPortStats gets the comms stats for this port
+func (sp *SerialPort) GetPortStats() *SerialPortStats {
+	return sp.stats
+}
+
 func (sp *SerialPort) showInMsg(b []byte) {
 	if sp.verbose {
 		l := len(b) - 3
@@ -38,6 +43,12 @@ func (sp *SerialPort) showInMsg(b []byte) {
 	}
 }
 
+// SerialPortStats hold useful stats for debugging
+type SerialPortStats struct {
+	txBytes uint64
+	rxBytes uint64
+}
+
 // SerialPort holds the file and file descriptor for the serial port
 type SerialPort struct {
 	file             *os.File
@@ -47,6 +58,7 @@ type SerialPort struct {
 	isOpen           bool
 	byteBuf          []byte
 	verbose          bool
+	stats            *SerialPortStats
 }
 
 // BaudRate is a type used for enumerating the permissible rates in our system.
@@ -88,6 +100,10 @@ func OpenSerialPort(devPath string, readTimeout time.Duration) (p *SerialPort, e
 		isOpen:           true,
 		byteBuf:          make([]byte, 1),
 		verbose:          false,
+		stats: &SerialPortStats{
+			txBytes: 0,
+			rxBytes: 0,
+		},
 	}
 
 	sp.SetBaudRate(HighSpeed, readTimeout)
@@ -132,12 +148,16 @@ func (sp *SerialPort) SetBaudRate(baudrate BaudRate, readTimeout time.Duration) 
 func (sp *SerialPort) Write(b []byte) error {
 	sp.showOutMsg(b)
 	_, err := sp.file.Write(b)
+	if err != nil {
+		sp.stats.txBytes += uint64(len(b))
+	}
 	return err
 }
 
 func (sp *SerialPort) read() (byte, error) {
 	_, err := sp.file.Read(sp.byteBuf)
 	b := sp.byteBuf[0]
+	sp.stats.rxBytes++
 	return b, err
 }
 

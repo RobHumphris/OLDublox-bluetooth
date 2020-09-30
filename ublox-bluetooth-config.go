@@ -1,6 +1,11 @@
 package ubloxbluetooth
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+
+	"github.com/pkg/errors"
+)
 
 func (ub *UbloxBluetooth) cmdRS232Settings(arg string) (*RS232SettingsReply, error) {
 	b, err := ub.writeAndWait(RS232SettingsCommand(arg), true)
@@ -61,24 +66,33 @@ func (ub *UbloxBluetooth) SetModuleStartMode(m StartMode) error {
 }
 
 // ConfigureUblox setups the ublox module
-func (ub *UbloxBluetooth) ConfigureUblox() error {
+func (ub *UbloxBluetooth) ConfigureUblox(connectionTimeout time.Duration) error {
 	_, err := ub.writeAndWait(BLERole(bleCentral), false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Error configuring BLECentral")
 	}
 
-	_, err = ub.writeAndWait(BLEConfig(minConnectionInterval, 24), false)
+	/*_, err = ub.writeAndWait(BLEConfig(minConnectionInterval, 24), false)
 	if err != nil {
-		return err
-	}
+		return errors.Wrap(err, "Error configuring minConnectionInterval")
+	}*/
 
 	_, err = ub.writeAndWait(BLEConfig(maxConnectionInterval, 40), false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Error configuring maxConnectionInterval")
+	}
+
+	timeout := int(connectionTimeout / time.Millisecond)
+	_, err = ub.writeAndWait(BLEConfig(connectCreateConnectionTimeout, timeout), false)
+	if err != nil {
+		return errors.Wrap(err, "Error configuring connectCreateConnectionTimeout")
 	}
 
 	_, err = ub.writeAndWait(BLEStoreConfig(), false)
-	return err
+	if err != nil {
+		return errors.Wrap(err, "BLEStoreConfig error")
+	}
+	return nil
 }
 
 const inactivityTimeoutType = 1

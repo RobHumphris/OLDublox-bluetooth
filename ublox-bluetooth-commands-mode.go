@@ -40,7 +40,7 @@ func (ub *UbloxBluetooth) EnterExtendedDataMode() error {
 
 // EnterCommandMode sends the Escape Sequence required to return the Command Mode (AT)
 func (ub *UbloxBluetooth) EnterCommandMode() error {
-	err := ub.serialPort.ToggleDTR()
+	err := ub.serialPort.ResetViaDTR()
 	if err != nil {
 		return errors.Wrap(err, "[EnterCommandMode] error")
 	}

@@ -1,6 +1,8 @@
 package ubloxbluetooth
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"time"
 
@@ -35,6 +37,21 @@ func (ub *UbloxBluetooth) MultipleATCommands() error {
 	return fmt.Errorf("Failed after 5 attempts %v", e)
 }
 
+// getSerialNumber retrieves the serial number of the dongle
+func (ub *UbloxBluetooth) getSerialNumber() (string, error) {
+	sn, err := ub.writeAndWait(GetSerialCommand(), true)
+	if err != nil {
+		return "", err
+	}
+
+	lines := bytes.Split(sn, []byte("\r\n"))
+	if len(lines) > 0 {
+		return string(lines[0]), nil
+	}
+
+	return "Unknown", nil
+}
+
 // EchoOff requests that the ublox device is a little less noisy
 func (ub *UbloxBluetooth) EchoOff() error {
 	_, err := ub.writeAndWait(EchoOffCommand(), false)
@@ -55,12 +72,26 @@ func (ub *UbloxBluetooth) RebootUblox() error {
 }
 
 // GetDeviceRSSI gets the Recieved Signal Strength for the `address`
-func (ub *UbloxBluetooth) GetDeviceRSSI(address string) (string, error) {
+/*func (ub *UbloxBluetooth) GetDeviceRSSI(address string) (string, error) {
 	d, err := ub.writeAndWait(GetRSSICommand(address), true)
 	if err != nil {
 		return "??", err
 	}
 	return ProcessRSSIReply(d)
+}*/
+
+// SetDTRBehavior configures the device to the correct DTR behaviour
+func (ub *UbloxBluetooth) SetDTRBehavior() error {
+	_, err := ub.writeAndWait(SetDTRBehaviorCommand(4), false)
+	if err != nil {
+		return errors.Wrap(err, "SetDTRBehaviorCommand error")
+	}
+
+	_, err = ub.writeAndWait(BLEStoreConfig(), false)
+	if err != nil {
+		return errors.Wrap(err, "BLEStoreConfig error")
+	}
+	return nil
 }
 
 // PeerList returns a list of connected peers.
@@ -75,23 +106,65 @@ func (ub *UbloxBluetooth) PeerList() error {
 	return nil
 }
 
-// DiscoveryCommand issues the Discover command and calls the DiscoveryReplyHandler
-func (ub *UbloxBluetooth) DiscoveryCommand(fn DiscoveryReplyHandler) error {
-	dc := DiscoveryCommand()
-	err := ub.Write(dc.Cmd)
-	if err != nil {
-		return err
-	}
+// DiscoveryReplyCallback function is called for each DiscoveryReply
+type DiscoveryReplyCallback func(*DiscoveryReply, int32) error
 
-	return ub.HandleDiscovery(dc.Resp, func(d []byte) (bool, error) {
+func (ub *UbloxBluetooth) handleDiscovery(expResp string, drChan chan *DiscoveryReply) error {
+	return ub.HandleDiscovery(expResp, func(d []byte) (bool, error) {
 		dr, err := ProcessDiscoveryReply(d)
+		dr.DongleIndex = ub.GetDeviceIndex()
 		if err == nil {
-			err = fn(dr)
-		} else if err != ErrUnexpectedResponse {
+			drChan <- dr
+		} else if err != ErrorUnexpectedResponse {
 			return false, err
 		}
 		return true, nil
 	})
+}
+
+// ErrorContextCancelled returned if the Context is cancelled
+var ErrorContextCancelled = fmt.Errorf("Context Cancelled")
+
+// MultiDiscoverWithContext runs scans on all devices in parallel
+func (btd *BluetoothDevices) MultiDiscoverWithContext(ctx context.Context, scantime time.Duration, drChan chan *DiscoveryReply) error {
+	var err error
+	noOfDevices := btd.DeviceCount()
+	errChan := make(chan error, noOfDevices)
+
+	btd.ForEachDevice(func(ub *UbloxBluetooth) error {
+		go ub.discoveryCommandWithContext(ctx, scantime, drChan, errChan)
+		return nil
+	})
+
+	// Don't concatenate errors. We need to spot the ContextCancelled error
+	err = <-errChan
+	if noOfDevices == 2 {
+		err = <-errChan
+	}
+
+	return err
+}
+
+// discoveryCommandWithContext issues discovery command and handles the replies, with a context to cancel
+func (ub *UbloxBluetooth) discoveryCommandWithContext(ctx context.Context, scantime time.Duration, drChan chan *DiscoveryReply, ec chan error) {
+	scanPeriod := int(scantime / time.Millisecond)
+	dc := DiscoveryCommand(scanPeriod)
+	err := ub.Write(dc.Cmd)
+	if err != nil {
+		ec <- err
+	}
+
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- ub.handleDiscovery(dc.Resp, drChan)
+	}()
+
+	select {
+	case e := <-errChan:
+		ec <- e
+	case <-ctx.Done():
+		ec <- ErrorContextCancelled
+	}
 }
 
 // ConnectToDevice attempts to connect to the device with the specified address.
@@ -109,16 +182,8 @@ func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent,
 	ub.connectedDevice = cr
 	ub.disconnectHandler = onDisconnect
 	ub.disconnectExpected = false
-	return onConnect()
-}
-
-func (ub *UbloxBluetooth) handleUnexpectedDisconnection() {
-	ub.connectedDevice = nil
-	ub.disconnectHandler = nil
-	ub.disconnectExpected = false
-	if ub.disconnectHandler != nil {
-		ub.ErrorChannel <- ub.disconnectHandler()
-	}
+	ub.disconnectCount = 0
+	return onConnect(ub)
 }
 
 // DisconnectFromDevice issues the disconnect command using the handle from the ConnectionReply
@@ -127,21 +192,27 @@ func (ub *UbloxBluetooth) DisconnectFromDevice() error {
 		return fmt.Errorf("ConnectionReply is nil")
 	}
 
-	ub.disconnectExpected = true
+	if ub.disconnectCount < 1 {
+		ub.disconnectCount++
+		ub.disconnectExpected = true
 
-	d, err := ub.writeAndWait(DisconnectCommand(ub.connectedDevice.Handle), true)
-	if err != nil {
+		d, err := ub.writeAndWait(DisconnectCommand(ub.connectedDevice.Handle), true)
+		if err != nil {
+			return err
+		}
+
+		ok, err := ProcessDisconnectReply(d)
+		if !ok {
+			return fmt.Errorf("Incorrect disconnect reply %q", d)
+		}
+
+		ub.connectedDevice = nil
+		ub.disconnectHandler = nil
+		ub.disconnectExpected = false
 		return err
 	}
 
-	ok, err := ProcessDisconnectReply(d)
-	if !ok {
-		return fmt.Errorf("Incorrect disconnect reply %q", d)
-	}
-	ub.connectedDevice = nil
-	ub.disconnectHandler = nil
-	ub.disconnectExpected = false
-	return err
+	return fmt.Errorf("Error attempting to double disconnect")
 }
 
 // EnableIndications instructs the connected device to initialise indiciations
@@ -173,6 +244,5 @@ func (ub *UbloxBluetooth) ReadCharacterisitic() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "ReadCharacterisitic error")
 	}
-	fmt.Printf("ReadCharacterisitic: %s\n", d)
 	return d, nil
 }

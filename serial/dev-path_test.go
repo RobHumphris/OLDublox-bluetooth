@@ -3,12 +3,10 @@ package serial
 import (
 	"fmt"
 	"testing"
-
-	"github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
 func TestGetFTDIDevPath(t *testing.T) {
-	path, err := serial.GetFTDIDevPath()
+	path, err := GetFTDIDevPaths()
 	if err != nil {
 		t.Errorf("GetFTDIDevPath failed: %v\n", err)
 	}

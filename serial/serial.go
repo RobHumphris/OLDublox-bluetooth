@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"time"
 	"unsafe"
@@ -14,18 +13,40 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var verbose = false
 var newlineBytes = []byte{'\r', '\n'}
 
 // SetVerbose sets the logging level
-func SetVerbose(v bool) {
-	verbose = v
+func (sp *SerialPort) SetVerbose(v bool) {
+	sp.verbose = v
 }
 
-func showMsg(format string, v ...interface{}) {
-	if verbose {
-		log.Printf(format, v...)
+func (sp *SerialPort) showOutMsg(b []byte) {
+	if sp.verbose {
+		l := len(b) - 2
+		fmt.Printf("-> %s\n", b[5:l])
 	}
+}
+
+// GetPortStats gets the comms stats for this port
+func (sp *SerialPort) GetPortStats() *SerialPortStats {
+	return sp.stats
+}
+
+func (sp *SerialPort) showInMsg(b []byte) {
+	if sp.verbose {
+		l := len(b) - 3
+		if l > 7 {
+			fmt.Printf("<- %s\n", b[7:l])
+		} else {
+			fmt.Printf("<- %+q\n", b)
+		}
+	}
+}
+
+// SerialPortStats hold useful stats for debugging
+type SerialPortStats struct {
+	txBytes uint64
+	rxBytes uint64
 }
 
 // SerialPort holds the file and file descriptor for the serial port
@@ -35,6 +56,9 @@ type SerialPort struct {
 	extendedDataMode bool
 	contineScanning  bool
 	isOpen           bool
+	byteBuf          []byte
+	verbose          bool
+	stats            *SerialPortStats
 }
 
 // BaudRate is a type used for enumerating the permissible rates in our system.
@@ -47,13 +71,8 @@ const (
 	HighSpeed BaudRate = unix.B1000000
 )
 
-// OpenSerialPort opens the Ublox device with a timeout value
-func OpenSerialPort(readTimeout time.Duration) (p *SerialPort, err error) {
-	devPath, err := GetFTDIDevPath()
-	if err != nil {
-		return nil, err
-	}
-
+// OpenSerialPort opens a Ublox device with a timeout value
+func OpenSerialPort(devPath string, readTimeout time.Duration) (p *SerialPort, err error) {
 	f, err := os.OpenFile(devPath, unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0666)
 	if err != nil {
 		return nil, err
@@ -79,6 +98,12 @@ func OpenSerialPort(readTimeout time.Duration) (p *SerialPort, err error) {
 		extendedDataMode: true,
 		contineScanning:  true,
 		isOpen:           true,
+		byteBuf:          make([]byte, 1),
+		verbose:          false,
+		stats: &SerialPortStats{
+			txBytes: 0,
+			rxBytes: 0,
+		},
 	}
 
 	sp.SetBaudRate(HighSpeed, readTimeout)
@@ -121,9 +146,19 @@ func (sp *SerialPort) SetBaudRate(baudrate BaudRate, readTimeout time.Duration) 
 
 // Write write's the passed byte array to the serial port
 func (sp *SerialPort) Write(b []byte) error {
-	showMsg("W: %s\n[%x]", b, b)
+	sp.showOutMsg(b)
 	_, err := sp.file.Write(b)
+	if err != nil {
+		sp.stats.txBytes += uint64(len(b))
+	}
 	return err
+}
+
+func (sp *SerialPort) read() (byte, error) {
+	_, err := sp.file.Read(sp.byteBuf)
+	b := sp.byteBuf[0]
+	sp.stats.rxBytes++
+	return b, err
 }
 
 const EDMStartByte = byte(0xAA)
@@ -135,18 +170,29 @@ func (sp *SerialPort) StopScanning() {
 	sp.contineScanning = false
 }
 
-// ScanLines reads a complete line from the serial port and sends the bytes
+// ScanPort reads a complete line from the serial port and sends the bytes
 // to the passed channel
 func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errChan chan error) {
+	defer func() {
+		if err := recover(); err != nil {
+			if fmt.Sprintf("%v", err) == "send on closed channel" {
+				// Should be enough to avoid a crash/stack trace on shutdown
+				fmt.Printf("[UbScanPort] Caught Panic: %v", err)
+			} else {
+				// Other issue, rethrow the panic
+				panic(err)
+			}
+		}
+	}()
+
 	sp.contineScanning = true
 	line := []byte{}
 	lineLen := 0
 	expectedLength := -1
 	edmStartReceived := false
-	buf := make([]byte, 1)
-	for sp.contineScanning == true {
-		_, err := sp.file.Read(buf)
 
+	for sp.contineScanning == true {
+		b, err := sp.read()
 		if err != nil {
 			if err == io.EOF { // ignore EOFs we're going to get them all the time.
 				continue
@@ -162,19 +208,19 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 
 		if sp.extendedDataMode {
 			if !edmStartReceived {
-				if buf[0] == EDMStartByte {
+				if b == EDMStartByte {
 					edmStartReceived = true
 				}
 			}
 			if edmStartReceived {
-				line = append(line, buf[0])
+				line = append(line, b)
 				lineLen = len(line)
 
 				if expectedLength == -1 && lineLen == 3 {
 					expectedLength = int(binary.BigEndian.Uint16(line[1:3])) + EDMPayloadOverhead
 				} else if lineLen == expectedLength {
 					if line[expectedLength-1] == EDMStopByte {
-						showMsg("EDM R: %s\n[%x]", line, line)
+						sp.showInMsg(line)
 						edmChan <- line[EDMHeaderSize:expectedLength]
 						line = []byte{}
 						expectedLength = -1
@@ -188,11 +234,11 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 				}
 			}
 		} else {
-			line = append(line, buf[0])
+			line = append(line, b)
 			lineLen = len(line)
 			if bytes.HasSuffix(line, newlineBytes) {
 				if lineLen > 2 {
-					showMsg("R: \"%s\"\n[%x]", buf, buf)
+					sp.showInMsg(line)
 					dataChan <- line
 				}
 				line = []byte{}
@@ -231,12 +277,14 @@ func (sp *SerialPort) Flush() error {
 	return nil
 }
 
+var defaultDTRPause = 10 * time.Millisecond
+
 func (sp *SerialPort) setDTR() error {
 	err := sp.ioctl(unix.TIOCMBIS, unix.TIOCM_DTR)
 	if err != nil {
 		return fmt.Errorf("[ToggleDTR] DTR set error: %d", err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(defaultDTRPause)
 	return nil
 }
 
@@ -245,21 +293,7 @@ func (sp *SerialPort) clearDTR() error {
 	if err != nil {
 		return fmt.Errorf("[ToggleDTR] DTR clear error: %d", err)
 	}
-	time.Sleep(10 * time.Millisecond)
-	return nil
-}
-
-// ToggleDTR sets and resets the DTR pin
-func (sp *SerialPort) ToggleDTR() error {
-	err := sp.setDTR()
-	if err != nil {
-		return err
-	}
-
-	err = sp.clearDTR()
-	if err != nil {
-		return err
-	}
+	time.Sleep(defaultDTRPause)
 	return nil
 }
 
@@ -275,6 +309,7 @@ func (sp *SerialPort) ResetViaDTR() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

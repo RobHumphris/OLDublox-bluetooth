@@ -88,9 +88,9 @@ func PeerListCommand() CmdResp {
 }
 
 // DiscoveryCommand - commands that all is discovered
-func DiscoveryCommand() CmdResp {
+func DiscoveryCommand(scanMS int) CmdResp {
 	return CmdResp{
-		Cmd:  fmt.Sprintf("AT%s=4,1", discovery),
+		Cmd:  fmt.Sprintf("AT%s=4,1,%d", discovery, scanMS),
 		Resp: discoveryResponseString,
 	}
 }
@@ -103,6 +103,20 @@ func DiscoveryCommand() CmdResp {
 func BLERole(role int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d", bleRole, role),
+		Resp: empty,
+	}
+}
+
+// SetDTRBehaviorCommand is called with one of the following values:
+// 0 ignore line
+// 1 Assert->Deassert = Enters command mode
+// 2 Assert->Deassert = Orderly disconnect of all radio links
+// 3 Assert->Deassert = UART deactivated. Reactivate with Deassert->Assert
+//   or BT connection
+// 4 Assert->Deassert = Module Shut off. Deassert->Assert start again.
+func SetDTRBehaviorCommand(value int) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT&D%d", value),
 		Resp: empty,
 	}
 }
@@ -125,7 +139,7 @@ func BLEStoreConfig() CmdResp {
 	}
 }
 
-// Constructs the command to connect to a device
+// ConnectCommand Constructs the command to connect to a device
 func ConnectCommand(address string) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%s", connect, address),
@@ -133,7 +147,7 @@ func ConnectCommand(address string) CmdResp {
 	}
 }
 
-// Constructs the command to disconnect to a device
+// DisconnectCommand Constructs the command to disconnect to a device
 func DisconnectCommand(handle int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d", disconnect, handle),
@@ -141,6 +155,7 @@ func DisconnectCommand(handle int) CmdResp {
 	}
 }
 
+// WriteCharacteristicConfigurationCommand constructs the command to set device characteristics
 func WriteCharacteristicConfigurationCommand(connHandle int, descHandle int, config int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d,%d,%d", writeCharacteristicConfig, connHandle, descHandle, config),
@@ -148,6 +163,7 @@ func WriteCharacteristicConfigurationCommand(connHandle int, descHandle int, con
 	}
 }
 
+// ReadCharacterisiticCommand constructs the command to read the device's characteristics
 func ReadCharacterisiticCommand(connHandle int, valueHandle int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d,%d", readCharacterisitic, connHandle, valueHandle),
@@ -155,20 +171,32 @@ func ReadCharacterisiticCommand(connHandle int, valueHandle int) CmdResp {
 	}
 }
 
-func WriteCharacteristicCommand(connHandle int, valueHandle int, data []byte) CmdResp {
+type characteristicCommand struct {
+	connectionHandle int
+	valueHandle      int
+	data             []byte
+}
+
+func writeCharacteristicCommand(c characteristicCommand) CmdResp {
 	return CmdResp{
-		Cmd:  fmt.Sprintf("AT%s=%d,%d,%x", writeCharacteristic, connHandle, valueHandle, data),
+		Cmd:  fmt.Sprintf("AT%s=%d,%d,%x", writeCharacteristic, c.connectionHandle, c.valueHandle, c.data),
 		Resp: gattIndicationResponseString,
 	}
 }
 
-func WriteCharacteristicHexCommand(connHandle int, valueHandle int, data []byte, hex string) CmdResp {
+type characteristicHexCommand struct {
+	*characteristicCommand
+	hex string
+}
+
+func writeCharacteristicHexCommand(c characteristicHexCommand) CmdResp {
 	return CmdResp{
-		Cmd:  fmt.Sprintf("AT%s=%d,%d,%x%s", writeCharacteristic, connHandle, valueHandle, data, hex),
+		Cmd:  fmt.Sprintf("AT%s=%d,%d,%x%s", writeCharacteristic, c.connectionHandle, c.valueHandle, c.data, c.hex),
 		Resp: gattIndicationResponseString,
 	}
 }
 
+// ConnectPeerCommand creates the command
 func ConnectPeerCommand(url string) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%s", connectPeer, url),
@@ -176,6 +204,7 @@ func ConnectPeerCommand(url string) CmdResp {
 	}
 }
 
+// DisconnectPeerCommand creates the command
 func DisconnectPeerCommand(peerHandle int) CmdResp {
 	return CmdResp{
 		Cmd:  fmt.Sprintf("AT%s=%d", disconnectPeer, peerHandle),
@@ -183,6 +212,7 @@ func DisconnectPeerCommand(peerHandle int) CmdResp {
 	}
 }
 
+// EnterDataModeCommand creates the command
 func EnterDataModeCommand() CmdResp {
 	return CmdResp{
 		Cmd:  enterDataMode,
@@ -190,6 +220,7 @@ func EnterDataModeCommand() CmdResp {
 	}
 }
 
+// EnterExtendedDataModeCommand creates the command
 func EnterExtendedDataModeCommand() CmdResp {
 	return CmdResp{
 		Cmd:  enterExtendedDataMode,
@@ -197,9 +228,18 @@ func EnterExtendedDataModeCommand() CmdResp {
 	}
 }
 
+// IssueEscapeSequence creates the command
 func IssueEscapeSequence() CmdResp {
 	return CmdResp{
 		Cmd:  escapeSequence,
 		Resp: empty,
+	}
+}
+
+// GetSerialCommand creates the command
+func GetSerialCommand() CmdResp {
+	return CmdResp{
+		Cmd:  at + getSerialCmd,
+		Resp: quotedStringResponse,
 	}
 }

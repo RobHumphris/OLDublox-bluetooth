@@ -2,24 +2,28 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
-	u "github.com/RobHumphris/ublox-bluetooth"
-	serial "github.com/RobHumphris/ublox-bluetooth/serial"
 	retry "github.com/avast/retry-go"
+	"github.com/fortytw2/leaktest"
 	"github.com/pkg/errors"
 )
 
 func TestMultipleConnects(t *testing.T) {
-	serial.SetVerbose(true)
-	ub, err := u.NewUbloxBluetooth(timeout)
+	defer leaktest.Check(t)()
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
-	defer ub.Close()
 
-	err = ub.ConfigureUblox()
+	ub, err := btd.GetDevice(0)
+
+	//defer ub.Close()
+	ub.serialPort.SetVerbose(true)
+
+	err = ub.ConfigureUblox(timeout)
 	if err != nil {
 		t.Fatalf("ConfigureUblox error %v\n", err)
 	}
@@ -39,18 +43,11 @@ func TestMultipleConnects(t *testing.T) {
 		t.Errorf("EchoOff error %v\n", err)
 	}
 
-	settings, err := ub.GetRS232Settings()
-	if err != nil {
-		t.Fatalf("GetRS232Settings error %v\n", err)
-	}
-	fmt.Printf("RS232 settings: %v\n", settings)
-
 	fmt.Printf("Starting connect test ")
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		err = retry.Do(func() error {
 			fmt.Printf("%03d ", i)
-			//e := doConnect(ub, "C1851F6083F8r", i)
-			e := doConnect(ub, "CE1A0B7E9D79r", i)
+			e := doConnect(ub, os.Getenv("DEVICE_MAC"), i)
 			if e != nil {
 				fmt.Printf("doConnect error %v", err)
 			}
@@ -58,39 +55,35 @@ func TestMultipleConnects(t *testing.T) {
 		},
 			retry.Attempts(3),
 			retry.Delay(500*time.Millisecond))
-
-		//doConnect(ub, "CE1A0B7E9D79r", t)
-		//doConnect(ub, "D8CFDFA118ECr", t)
 	}
+	ub.Close()
 }
 
-func doConnect(ub *u.UbloxBluetooth, mac string, count int) error {
-	fmt.Print("C")
-	err := ub.ConnectToDevice(mac, func() error {
+func doConnect(ub *UbloxBluetooth, mac string, count int) error {
+	st := time.Now().UnixNano()
+	err := ub.ConnectToDevice(mac, func(ub *UbloxBluetooth) error {
 		defer ub.DisconnectFromDevice()
+		tt := time.Now().UnixNano() - st
+		fmt.Printf("Connection delay: %dns\n", tt)
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 
-		fmt.Print("N")
 		err := ub.EnableNotifications()
 		if err != nil {
 			return errors.Wrapf(err, "EnableNotifications mac: %s count: %d\n", mac, count)
 		}
 
-		fmt.Print("I")
 		err = ub.EnableIndications()
 		if err != nil {
 			return errors.Wrapf(err, "EnableIndications mac: %s count: %d\n", mac, count)
 		}
 
-		fmt.Print("U")
 		_, err = ub.UnlockDevice(password)
 		if err != nil {
 			return errors.Wrapf(err, "UnlockDevice mac: %s count: %d\n", mac, count)
 		}
-		fmt.Print("D\n")
 		return nil
-	}, func() error {
+	}, func(ub *UbloxBluetooth) error {
 		return fmt.Errorf("Disconnected")
 	})
 	if err != nil {

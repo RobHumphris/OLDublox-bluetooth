@@ -2,12 +2,26 @@ package ubloxbluetooth
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/RobHumphris/ublox-bluetooth/serial"
+	"github.com/8power/ublox-bluetooth/serial"
+	"github.com/pkg/errors"
 )
+
+// ErrRebooted is raised when an Unexpected reboot has occured
+var ErrRebooted = fmt.Errorf("Error Ublox has rebooted")
+
+// ErrTimeout is raised when a communication timeout occurs
+var ErrTimeout = fmt.Errorf("Timeout")
+
+// ErrNoDongles No EH750's detected
+var ErrNoDongles = fmt.Errorf("No EH750's located")
+
+// ErrBadDeviceIndex bad device index
+var ErrBadDeviceIndex = fmt.Errorf("Bad device index")
 
 // DataResponse holds the Token at the start of the reply, and the subsequent data bytes
 type DataResponse struct {
@@ -15,23 +29,14 @@ type DataResponse struct {
 	data  []byte
 }
 
-// DataHandler is called when the UbloxBluetooth DataChannel recieves a message
+// Discoveryhandler is called when the UbloxBluetooth DataChannel recieves a message
 type Discoveryhandler func([]byte) (bool, error)
-
-// DownloadNotificationHandler is called each time that a Notification is received during a download
-type DownloadNotificationHandler func([]byte) error
-
-// DownloadIndicationHandler is called each time that an Indication is received during a download
-type DownloadIndicationHandler func(string) error
 
 // DataMessageHandler functions are invoked when data is recieved.
 type DataMessageHandler func([]byte) (bool, error)
 
 // DeviceEvent functions are called and defined in various events e.g. Connect, Disconnect
-type DeviceEvent func() error
-
-// DiscoveryReplyHandler handles discovery replies
-type DiscoveryReplyHandler func(*DiscoveryReply) error
+type DeviceEvent func(*UbloxBluetooth) error
 
 type ubloxMode int
 
@@ -39,11 +44,16 @@ const commandMode ubloxMode = 0
 const dataMode ubloxMode = 1
 const extendedDataMode ubloxMode = 2
 
+var discoveryIndex uint8 = 0
+
 // UbloxBluetooth holds the serial port, and the communication channels.
 type UbloxBluetooth struct {
 	timeout            time.Duration
 	lastCommand        string
+	deviceIndex        uint8
+	serialID           *serial.BtdSerial
 	serialPort         *serial.SerialPort
+	serialNumber       string
 	currentMode        ubloxMode
 	StartEventReceived bool
 	readChannel        chan []byte
@@ -51,15 +61,90 @@ type UbloxBluetooth struct {
 	EDMChannel         chan []byte
 	ErrorChannel       chan error
 	CompletedChannel   chan bool
-	stopScanning       chan bool
+	ctx                context.Context
+	cancel             context.CancelFunc
 	connectedDevice    *ConnectionReply
 	disconnectHandler  DeviceEvent
+	disconnectCount    int
 	disconnectExpected bool
 }
 
+// BluetoothDevices Is an slice of dongle handles
+type BluetoothDevices struct {
+	Bt []*UbloxBluetooth
+}
+
+// DeviceCount retrieves the number of bluetooth dongles detected
+func (btd *BluetoothDevices) DeviceCount() int {
+	return len(btd.Bt)
+}
+
+// GetDevice retrieves the handle of the device at index
+func (btd *BluetoothDevices) GetDevice(device int) (*UbloxBluetooth, error) {
+	if device < 0 || device >= len(btd.Bt) {
+		return nil, ErrBadDeviceIndex
+	}
+
+	return btd.Bt[device], nil
+}
+
+// ForEachDevice iterator function for all devices with callback f
+func (btd *BluetoothDevices) ForEachDevice(f func(*UbloxBluetooth) error) error {
+	var result error = nil
+	for _, ub := range btd.Bt {
+		err := f(ub)
+		if err != nil {
+			result = errors.Wrapf(err, "ForEachDevice failed")
+		}
+	}
+	return result
+}
+
+// SetVerbose on all bluetooth devices
+func (btd *BluetoothDevices) SetVerbose(v bool) error {
+	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
+		ub.serialPort.SetVerbose(v)
+		return nil
+	})
+}
+
+// CloseAll bluetooth devices
+func (btd *BluetoothDevices) CloseAll() error {
+	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
+		ub.Close()
+		return nil
+	})
+}
+
+// InitUbloxBluetooth creates a new UbloxBluetooth instance
+func InitUbloxBluetooth(timeout time.Duration) (*BluetoothDevices, error) {
+	btd := &BluetoothDevices{}
+	serialPorts, err := serial.GetFTDIDevPaths()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(serialPorts) == 0 {
+		return nil, ErrNoDongles
+	}
+
+	btd.Bt = make([]*UbloxBluetooth, len(serialPorts))
+	for idx, sp := range serialPorts {
+		btd.Bt[idx], err = newUbloxBluetooth(sp, timeout)
+	}
+
+	for _, ub := range btd.Bt {
+		// read the serial number
+		ub.serialNumber, err = ub.getSerialNumber()
+		ub.serialNumber = strings.Trim(ub.serialNumber, "\"")
+	}
+
+	return btd, nil
+}
+
 // NewUbloxBluetooth creates a new UbloxBluetooth instance
-func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
-	sp, err := serial.OpenSerialPort(timeout)
+func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*UbloxBluetooth, error) {
+	sp, err := serial.OpenSerialPort(serialID.SerialPort, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -70,10 +155,15 @@ func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
 		return nil, err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	ub := &UbloxBluetooth{
 		timeout:            timeout,
 		lastCommand:        "",
+		deviceIndex:        discoveryIndex,
+		serialID:           serialID,
 		serialPort:         sp,
+		serialNumber:       "",
 		currentMode:        extendedDataMode,
 		StartEventReceived: false,
 		readChannel:        make(chan []byte),
@@ -81,9 +171,12 @@ func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
 		EDMChannel:         make(chan []byte),
 		ErrorChannel:       make(chan error),
 		CompletedChannel:   make(chan bool),
-		stopScanning:       make(chan bool),
+		ctx:                ctx, //stopScanning:       make(chan bool),
+		cancel:             cancel,
 		connectedDevice:    nil,
+		disconnectCount:    0,
 	}
+	discoveryIndex++
 
 	sp.SetEDMFlag(true)
 
@@ -93,12 +186,24 @@ func NewUbloxBluetooth(timeout time.Duration) (*UbloxBluetooth, error) {
 }
 
 func (ub *UbloxBluetooth) serialportReader() {
+	defer func() {
+		if err := recover(); err != nil {
+			if fmt.Sprintf("%v", err) == "send on closed channel" {
+				// Should be enough to avoid a crash/stack trace on shutdown
+				fmt.Printf("[UbSerialPortReader] Caught Panic: %v", err)
+			} else {
+				// Other issue, rethrow the panic
+				panic(err)
+			}
+		}
+	}()
+
 	go ub.serialPort.ScanPort(ub.readChannel, ub.EDMChannel, ub.ErrorChannel)
 
 	for {
 		select {
-		case b := <-ub.readChannel:
-			b = bytes.Trim(b, newline)
+		case r := <-ub.readChannel:
+			b := bytes.Trim(r, newline)
 			if len(b) != 0 {
 				switch b[0] {
 				case 'A':
@@ -116,8 +221,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 					ub.ErrorChannel <- err
 				}
 			}
-		case _ = <-ub.stopScanning:
-			fmt.Println("StopScanning received")
+		case <-ub.ctx.Done():
 			ub.serialPort.StopScanning()
 			return
 		}
@@ -126,10 +230,9 @@ func (ub *UbloxBluetooth) serialportReader() {
 
 // ResetSerial stops reading threads and
 func (ub *UbloxBluetooth) ResetSerial() error {
-	ub.stopScanning <- true
 	ub.serialPort.Close()
 
-	sp, err := serial.OpenSerialPort(ub.timeout)
+	sp, err := serial.OpenSerialPort(ub.serialID.SerialPort, ub.timeout)
 	if err != nil {
 		return err
 	}
@@ -154,7 +257,9 @@ func (ub *UbloxBluetooth) ResetSerial() error {
 
 // Close shuts down the serial port, can closes communication channels.
 func (ub *UbloxBluetooth) Close() {
-	fmt.Println("### Closing Serial Port")
+	ub.cancel()
+
+	ub.serialPort.StopScanning()
 	err := ub.serialPort.Close()
 	if err != nil {
 		fmt.Printf("[Close] error %v\n", err)
@@ -174,7 +279,7 @@ func (ub *UbloxBluetooth) SetCommsRate(rate serial.BaudRate) error {
 
 // SetSerialVerbose sets the debug flag
 func (ub *UbloxBluetooth) SetSerialVerbose(f bool) {
-	serial.SetVerbose(f)
+	ub.serialPort.SetVerbose(f)
 }
 
 // Write writes the data string to Ublox via the SerialPort
@@ -228,7 +333,7 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 		case e := <-ub.ErrorChannel:
 			return nil, e
 		case <-time.After(ub.timeout):
-			return nil, fmt.Errorf("Timeout")
+			return nil, ErrTimeout
 		}
 	}
 }
@@ -238,7 +343,7 @@ func handleUnsolicitedMessage(data []byte) error {
 		// Todo - handle the likes of +UUBTLEPHYU:0,0,2,2
 	} else {
 		if bytes.HasPrefix(data, rebootResponse) {
-			return fmt.Errorf("Error device has rebooted")
+			return ErrRebooted
 		}
 		fmt.Printf("**** [handleUnexpectedMessage] %s ****\n", data)
 	}
@@ -262,11 +367,12 @@ var indicationSeperator = []byte("13,")
 // `dnh` Notification handler function which is invoked each time a notification is received.
 //
 // `dih` Indication handler function, which is invoked each time an indication is received.
-func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, dnh DownloadNotificationHandler, dih func([]byte) error) error {
+func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, dnh func([]byte) error, dih func([]byte) error) error {
 	var err error
 	received := 0
 	dataComplete := false
 	indicationRecieved := false
+
 	for {
 		select {
 		case data := <-ub.DataChannel:
@@ -299,7 +405,7 @@ func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, 
 				return fmt.Errorf("unexpected: %s", data)
 			}
 		case <-time.After(ub.timeout):
-			return fmt.Errorf("Timeout")
+			return ErrTimeout
 		}
 	}
 }
@@ -317,7 +423,7 @@ func (ub *UbloxBluetooth) WaitOnDataChannel(fn DataMessageHandler) error {
 		case e := <-ub.ErrorChannel:
 			return e
 		case <-time.After(ub.timeout):
-			return fmt.Errorf("Timeout")
+			return ErrTimeout
 		}
 	}
 }
@@ -341,7 +447,7 @@ func (ub *UbloxBluetooth) HandleDiscovery(expectedResponse string, fn Discoveryh
 		case e := <-ub.ErrorChannel:
 			return e
 		case <-time.After(ub.timeout):
-			return fmt.Errorf("Timeout")
+			return ErrTimeout
 		}
 	}
 }
@@ -373,4 +479,19 @@ func (ub *UbloxBluetooth) handleGeneralMessage(b []byte) {
 
 func (ub *UbloxBluetooth) handleUnknownPayload(t string, p string) {
 	ub.ErrorChannel <- fmt.Errorf("Unknown token %s payload %s", t, p)
+}
+
+// GetSerialPort retrieves the serial port
+func (ub *UbloxBluetooth) GetSerialPort() string {
+	return ub.serialID.SerialPort
+}
+
+// GetSerialNumber retrieves this dongles serial number
+func (ub *UbloxBluetooth) GetSerialNumber() string {
+	return ub.serialNumber
+}
+
+// GetDeviceIndex retrieves this dongles enumeration index number
+func (ub *UbloxBluetooth) GetDeviceIndex() uint8 {
+	return ub.deviceIndex
 }

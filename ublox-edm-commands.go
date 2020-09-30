@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-const EDMStartByte = byte(0xAA)
-const EDMStopByte = byte(0x55)
-const EDMPayloadOverhead = 4
+const edmStartByte = byte(0xAA)
+const edmStopByte = byte(0x55)
+const edmPayloadOverhead = 4
 
 // EMDCmdResp holds EDM CoMmanD and the expected RESPonse
 type EMDCmdResp struct {
@@ -19,11 +19,11 @@ type EMDCmdResp struct {
 // NewEMDCmdBytes creates an EDM command containing the `payload` content
 func NewEMDCmdBytes(payload []byte) []byte {
 	l := uint16(len(payload))
-	b := make([]byte, l+EDMPayloadOverhead)
-	b[0] = EDMStartByte
+	b := make([]byte, l+edmPayloadOverhead)
+	b[0] = edmStartByte
 	binary.BigEndian.PutUint16(b[1:], l)
 	copy(b[3:], payload)
-	b[3+l] = EDMStopByte
+	b[3+l] = edmStopByte
 	return b
 }
 
@@ -41,14 +41,31 @@ func NewEDMATCommand(atCommand string) []byte {
 	return NewEMDCmdBytes(b)
 }
 
+// ConnectEvent message id
 const ConnectEvent = byte(0x11)
+
+// DisconnectEvent message id
 const DisconnectEvent = byte(0x21)
+
+// DataEvent message id
 const DataEvent = byte(0x31)
+
+// ATRequest message id
 const ATRequest = byte(0x44)
+
+// ATConfirmation message id
 const ATConfirmation = byte(0x45)
+
+// ATEvent message id
 const ATEvent = byte(0x41)
+
+// ResentConnect message id
 const ResentConnect = byte(0x56)
+
+// iPhoneEvent message id
 const iPhoneEvent = byte(0x61)
+
+// StartEvent message id
 const StartEvent = byte(0x71)
 
 func removeNewlines(data []byte) []byte {
@@ -69,13 +86,16 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 		switch data[0] {
 		case '+':
 			ub.DataChannel <- data
+		case '"':
+			ub.DataChannel <- data[:len(data)-2]
+			ub.CompletedChannel <- true
 		default:
 			ub.handleGeneralMessage(data)
 		}
 	case ATEvent:
 		// we check for disconnect events disconnectResponse
 		if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
-			ub.handleUnexpectedDisconnection()
+			fmt.Println("Unexpected disconnect")
 		}
 		ub.DataChannel <- data
 	}

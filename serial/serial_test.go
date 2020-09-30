@@ -3,22 +3,20 @@ package serial
 import (
 	"testing"
 	"time"
-
-	"github.com/RobHumphris/ublox-bluetooth/serial"
 )
 
 func TestSerial(t *testing.T) {
 	timeout := 5 * time.Second
 	//readChannel := make(chan []byte)
-	sp, err := serial.OpenSerialPort(timeout)
+	sp, err := OpenSerialPort("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("Open Port Error %v\n", err)
 	}
 	sp.Flush()
 
-	err = sp.ToggleDTR()
+	err = sp.ResetViaDTR()
 	if err != nil {
-		t.Fatalf("ToggleDTR error %v\n", err)
+		t.Fatalf("ResetViaDTR error %v\n", err)
 	}
 
 	time.Sleep(timeout)

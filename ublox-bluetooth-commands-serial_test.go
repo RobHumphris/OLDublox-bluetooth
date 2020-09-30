@@ -2,36 +2,49 @@ package ubloxbluetooth
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
-	ub "github.com/RobHumphris/ublox-bluetooth"
-	serial "github.com/RobHumphris/ublox-bluetooth/serial"
+	"github.com/pkg/errors"
 )
 
-func setupForSerialTests(t *testing.T, echoOff bool) (*ub.UbloxBluetooth, error) {
-	ub, err := ub.NewUbloxBluetooth(timeout)
+func setupForSerialTests(t *testing.T, echoOff bool) (*UbloxBluetooth, error) {
+	btd, err := InitUbloxBluetooth(timeout)
 	if err != nil {
-		t.Fatalf("NewUbloxBluetooth error %v\n", err)
+		return nil, errors.Wrap(err, "NewUbloxBluetooth error")
 	}
 
+	ub, err := btd.GetDevice(0)
+
+	err = ub.ConfigureUblox(timeout)
+	if err != nil {
+		return nil, errors.Wrap(err, "ConfigureUblox error")
+	}
 	err = ub.RebootUblox()
 	if err != nil {
-		t.Fatalf("RebootUblox error %v\n", err)
+		return nil, errors.Wrap(err, "RebootUblox error")
 	}
-
+	err = ub.ATCommand()
+	if err != nil {
+		return nil, errors.Wrap(err, "AT error")
+	}
 	if echoOff {
 		err = ub.EchoOff()
 		if err != nil {
 			t.Errorf("EchoOff error %v\n", err)
 		}
 	}
-
-	return ub, err
+	err = ub.ATCommand()
+	if err != nil {
+		return nil, errors.Wrap(err, "AT error")
+	}
+	return ub, nil
 }
 
 func TestReset(t *testing.T) {
 	ub, err := setupForSerialTests(t, false)
+	ub.serialPort.SetVerbose(true)
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
@@ -61,6 +74,7 @@ func TestDataMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewUbloxBluetooth error %v\n", err)
 	}
+	ub.serialPort.SetVerbose(true)
 
 	err = ub.EnterDataMode()
 	if err != nil {
@@ -91,8 +105,8 @@ func TestSerialPortService(t *testing.T) {
 		loopCount++
 
 		fmt.Print("A")
-		serial.SetVerbose(true)
-		h, err := ub.ConnectDeviceSPS("D4CA6EBE5AC8p")
+		ub.serialPort.SetVerbose(true)
+		h, err := ub.ConnectDeviceSPS(os.Getenv("DEVICE_MAC"))
 		if err != nil {
 			t.Fatalf("EnableSerialPort error %v\n", err)
 		}

@@ -29,7 +29,12 @@ func (sp *SerialPort) showOutMsg(b []byte) {
 
 // GetPortStats gets the comms stats for this port
 func (sp *SerialPort) GetPortStats() *SerialPortStats {
-	return sp.stats
+	// return a copy
+	rs := &SerialPortStats{
+		TxBytes: sp.stats.TxBytes,
+		RxBytes: sp.stats.RxBytes,
+	}
+	return rs
 }
 
 func (sp *SerialPort) showInMsg(b []byte) {

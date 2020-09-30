@@ -495,3 +495,8 @@ func (ub *UbloxBluetooth) GetSerialNumber() string {
 func (ub *UbloxBluetooth) GetDeviceIndex() uint8 {
 	return ub.deviceIndex
 }
+
+// GetSerialPortStats retrieves this dongles serial port stats
+func (ub *UbloxBluetooth) GetSerialPortStats() *serial.SerialPortStats {
+	return ub.serialPort.GetPortStats()
+}

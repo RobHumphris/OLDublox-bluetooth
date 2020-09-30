@@ -45,8 +45,8 @@ func (sp *SerialPort) showInMsg(b []byte) {
 
 // SerialPortStats hold useful stats for debugging
 type SerialPortStats struct {
-	txBytes uint64
-	rxBytes uint64
+	TxBytes uint64
+	RxBytes uint64
 }
 
 // SerialPort holds the file and file descriptor for the serial port
@@ -101,8 +101,8 @@ func OpenSerialPort(devPath string, readTimeout time.Duration) (p *SerialPort, e
 		byteBuf:          make([]byte, 1),
 		verbose:          false,
 		stats: &SerialPortStats{
-			txBytes: 0,
-			rxBytes: 0,
+			TxBytes: 0,
+			RxBytes: 0,
 		},
 	}
 
@@ -149,7 +149,7 @@ func (sp *SerialPort) Write(b []byte) error {
 	sp.showOutMsg(b)
 	_, err := sp.file.Write(b)
 	if err != nil {
-		sp.stats.txBytes += uint64(len(b))
+		sp.stats.TxBytes += uint64(len(b))
 	}
 	return err
 }
@@ -157,7 +157,7 @@ func (sp *SerialPort) Write(b []byte) error {
 func (sp *SerialPort) read() (byte, error) {
 	_, err := sp.file.Read(sp.byteBuf)
 	b := sp.byteBuf[0]
-	sp.stats.rxBytes++
+	sp.stats.RxBytes++
 	return b, err
 }
 

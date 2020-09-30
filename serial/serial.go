@@ -153,9 +153,7 @@ func (sp *SerialPort) SetBaudRate(baudrate BaudRate, readTimeout time.Duration) 
 func (sp *SerialPort) Write(b []byte) error {
 	sp.showOutMsg(b)
 	_, err := sp.file.Write(b)
-	if err != nil {
-		sp.stats.TxBytes += uint64(len(b))
-	}
+	sp.stats.TxBytes += uint64(len(b))
 	return err
 }
 

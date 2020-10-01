@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/8power/ublox-bluetooth/serial"
 	"github.com/pkg/errors"
 )
 
@@ -168,16 +169,41 @@ func (ub *UbloxBluetooth) discoveryCommandWithContext(ctx context.Context, scant
 }
 
 // ConnectToDevice attempts to connect to the device with the specified address.
-func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent, onDisconnect DeviceEvent) error {
-	d, err := ub.writeAndWait(ConnectCommand(address), true)
+func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent, onDisconnect DeviceEvent) (err error) {
+	var d []byte
+	d, err = ub.writeAndWait(ConnectCommand(address), true)
 	if err != nil {
 		return err
 	}
 
-	cr, err := NewConnectionReply(string(d))
+	var cr *ConnectionReply
+	cr, err = NewConnectionReply(string(d))
 	if err != nil {
 		return err
 	}
+
+	defer func(mac string, start time.Time, startStats *serial.SerialPortStats) {
+		elapsed := time.Since(start)
+		finishStats := ub.GetSerialPortStats()
+		stats, ok := ub.CommsStats[mac]
+		if !ok {
+			ub.CommsStats[mac] = &SensorCommsStatitics{
+				TotalBytesRxed:    uint64(0),
+				TotalBytesTxed:    uint64(0),
+				TotalCommandsSent: uint64(0),
+				CommandsFailed:    uint64(0),
+				TimeCommunicating: time.Duration(0),
+			}
+			stats = ub.CommsStats[mac]
+		}
+		stats.TotalBytesRxed += finishStats.RxBytes - startStats.RxBytes
+		stats.TotalBytesTxed += finishStats.TxBytes - startStats.TxBytes
+		stats.TimeCommunicating += elapsed
+		stats.TotalCommandsSent++
+		if err != nil {
+			stats.CommandsFailed++
+		}
+	}(address, time.Now(), ub.GetSerialPortStats())
 
 	ub.connectedDevice = cr
 	ub.disconnectHandler = onDisconnect

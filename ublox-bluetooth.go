@@ -46,6 +46,15 @@ const extendedDataMode ubloxMode = 2
 
 var discoveryIndex uint8 = 0
 
+// SensorCommsStatitics simple metrics data txed, rxed, time spent commuinicating minus Connect msg and delays
+type SensorCommsStatitics struct {
+	TotalBytesTxed    uint64
+	TotalBytesRxed    uint64
+	TotalCommandsSent uint64
+	CommandsFailed    uint64
+	TimeCommunicating time.Duration
+}
+
 // UbloxBluetooth holds the serial port, and the communication channels.
 type UbloxBluetooth struct {
 	timeout            time.Duration
@@ -67,6 +76,7 @@ type UbloxBluetooth struct {
 	disconnectHandler  DeviceEvent
 	disconnectCount    int
 	disconnectExpected bool
+	CommsStats         map[string]*SensorCommsStatitics
 }
 
 // BluetoothDevices Is an slice of dongle handles
@@ -175,6 +185,7 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*Ublo
 		cancel:             cancel,
 		connectedDevice:    nil,
 		disconnectCount:    0,
+		CommsStats:         make(map[string]*SensorCommsStatitics),
 	}
 	discoveryIndex++
 
@@ -499,4 +510,14 @@ func (ub *UbloxBluetooth) GetDeviceIndex() uint8 {
 // GetSerialPortStats retrieves this dongles serial port stats
 func (ub *UbloxBluetooth) GetSerialPortStats() *serial.SerialPortStats {
 	return ub.serialPort.GetPortStats()
+}
+
+// GetDeviceCommsStats retrieves this dongles serial port stats
+func (ub *UbloxBluetooth) GetDeviceCommsStats(mac string) (*SensorCommsStatitics, error) {
+	stats, ok := ub.CommsStats[mac]
+	if !ok {
+		return nil, fmt.Errorf("No stats for device %v on dongle %v", mac, ub.GetDeviceIndex())
+	}
+
+	return stats, nil
 }

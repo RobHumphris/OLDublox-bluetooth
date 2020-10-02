@@ -171,12 +171,23 @@ func (ub *UbloxBluetooth) discoveryCommandWithContext(ctx context.Context, scant
 // ConnectToDevice attempts to connect to the device with the specified address.
 func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent, onDisconnect DeviceEvent) (err error) {
 	var d []byte
+	var cr *ConnectionReply
+
 	d, err = ub.writeAndWait(ConnectCommand(address), true)
 	if err != nil {
 		return err
 	}
 
-	var cr *ConnectionReply
+	// Flush out disconnect request - Bug in current Nina firmware.
+	err = ub.ATCommand()
+	if err != nil {
+		// Try again...
+		d, err = ub.writeAndWait(ConnectCommand(address), true)
+		if err != nil {
+			return err
+		}
+	}
+
 	cr, err = NewConnectionReply(string(d))
 	if err != nil {
 		return err
@@ -190,8 +201,8 @@ func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent,
 			ub.CommsStats[mac] = &SensorCommsStatitics{
 				TotalBytesRxed:    uint64(0),
 				TotalBytesTxed:    uint64(0),
-				TotalCommandsSent: uint64(0),
-				CommandsFailed:    uint64(0),
+				TotalConnections:  uint64(0),
+				ConnectionsFailed: uint64(0),
 				TimeCommunicating: time.Duration(0),
 			}
 			stats = ub.CommsStats[mac]
@@ -199,9 +210,9 @@ func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent,
 		stats.TotalBytesRxed += finishStats.RxBytes - startStats.RxBytes
 		stats.TotalBytesTxed += finishStats.TxBytes - startStats.TxBytes
 		stats.TimeCommunicating += elapsed
-		stats.TotalCommandsSent++
+		stats.TotalConnections++
 		if err != nil {
-			stats.CommandsFailed++
+			stats.ConnectionsFailed++
 		}
 	}(address, time.Now(), ub.GetSerialPortStats())
 

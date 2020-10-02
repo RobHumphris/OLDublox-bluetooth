@@ -50,8 +50,8 @@ var discoveryIndex uint8 = 0
 type SensorCommsStatitics struct {
 	TotalBytesTxed    uint64
 	TotalBytesRxed    uint64
-	TotalCommandsSent uint64
-	CommandsFailed    uint64
+	TotalConnections  uint64
+	ConnectionsFailed uint64
 	TimeCommunicating time.Duration
 }
 

@@ -93,11 +93,16 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 			ub.handleGeneralMessage(data)
 		}
 	case ATEvent:
+		ub.DataChannel <- data
+
 		// we check for disconnect events disconnectResponse
 		if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
-			fmt.Println("Unexpected disconnect")
+			//fmt.Println("Unexpected disconnect")
+			if ub.disconnectHandler != nil {
+				go ub.disconnectHandler(ub)
+			}
+			return ErrUnexpectedDisconnect
 		}
-		ub.DataChannel <- data
 	}
 	return nil
 }

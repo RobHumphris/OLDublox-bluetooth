@@ -180,10 +180,15 @@ func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent,
 
 	// Flush out disconnect request - Bug in current Nina firmware.
 	err = ub.ATCommand()
-	if err != nil {
-		// Try again...
-		d, err = ub.writeAndWait(ConnectCommand(address), true)
-		if err != nil {
+	if err == nil {
+		if err == ErrUnexpectedDisconnect {
+			// Try again...
+			d, err = ub.writeAndWait(ConnectCommand(address), true)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Something bad happened
 			return err
 		}
 	}

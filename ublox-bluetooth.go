@@ -23,6 +23,9 @@ var ErrNoDongles = fmt.Errorf("No EH750's located")
 // ErrBadDeviceIndex bad device index
 var ErrBadDeviceIndex = fmt.Errorf("Bad device index")
 
+// ErrUnexpectedDisconnect during a connection
+var ErrUnexpectedDisconnect = fmt.Errorf("Unexpected device disconnect")
+
 // DataResponse holds the Token at the start of the reply, and the subsequent data bytes
 type DataResponse struct {
 	token string

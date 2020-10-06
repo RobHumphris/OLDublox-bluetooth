@@ -15,6 +15,17 @@ import (
 
 var newlineBytes = []byte{'\r', '\n'}
 
+const (
+	// EDMStartByte Extended Data Mode start byte value
+	EDMStartByte = byte(0xAA)
+	// EDMStopByte Extended Data Mode stop byte value
+	EDMStopByte = byte(0x55)
+	// EDMPayloadOverhead the number of bytes to skip to the start of the payload
+	EDMPayloadOverhead = 4
+	// EDMHeaderSize Extended Data Mode header size
+	EDMHeaderSize = 3
+)
+
 // SetVerbose sets the logging level
 func (sp *SerialPort) SetVerbose(v bool) {
 	sp.verbose = v
@@ -164,11 +175,7 @@ func (sp *SerialPort) read() (byte, error) {
 	return b, err
 }
 
-const EDMStartByte = byte(0xAA)
-const EDMStopByte = byte(0x55)
-const EDMPayloadOverhead = 4
-const EDMHeaderSize = 3
-
+// StopScanning sets the continueScanning flag to false
 func (sp *SerialPort) StopScanning() {
 	sp.contineScanning = false
 }
@@ -176,11 +183,13 @@ func (sp *SerialPort) StopScanning() {
 // ScanPort reads a complete line from the serial port and sends the bytes
 // to the passed channel
 func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errChan chan error) {
+	fmt.Println("[ScanPort] starting")
 	defer func() {
+		fmt.Println("[ScanPort] exiting")
 		if err := recover(); err != nil {
 			if fmt.Sprintf("%v", err) == "send on closed channel" {
 				// Should be enough to avoid a crash/stack trace on shutdown
-				fmt.Printf("[UbScanPort] Caught Panic: %v", err)
+				fmt.Printf("[ScanPort] Caught Panic: %v\n", err)
 			} else {
 				// Other issue, rethrow the panic
 				panic(err)
@@ -248,7 +257,6 @@ func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errCha
 			}
 		}
 	}
-	fmt.Print("[ScanPort] CATASTROPHIC ERROR")
 }
 
 // Ioctl sends

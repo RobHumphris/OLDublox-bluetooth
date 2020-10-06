@@ -204,7 +204,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 		if err := recover(); err != nil {
 			if fmt.Sprintf("%v", err) == "send on closed channel" {
 				// Should be enough to avoid a crash/stack trace on shutdown
-				fmt.Printf("[UbSerialPortReader] Caught Panic: %v", err)
+				fmt.Printf("[serialportReader] Caught Panic: %v\n", err)
 			} else {
 				// Other issue, rethrow the panic
 				panic(err)

@@ -2,14 +2,13 @@ package serial
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
-	"io"
-	"os"
+	"syscall"
 	"time"
 	"unsafe"
 
-	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )
 
@@ -67,8 +66,7 @@ type SerialPortStats struct {
 
 // SerialPort holds the file and file descriptor for the serial port
 type SerialPort struct {
-	file             *os.File
-	fd               uintptr
+	fd               int
 	extendedDataMode bool
 	contineScanning  bool
 	isOpen           bool
@@ -89,27 +87,24 @@ const (
 
 // OpenSerialPort opens a Ublox device with a timeout value
 func OpenSerialPort(devPath string, readTimeout time.Duration) (p *SerialPort, err error) {
-	f, err := os.OpenFile(devPath, unix.O_RDWR|unix.O_NOCTTY|unix.O_NONBLOCK, 0666)
+	fd, err := syscall.Open(devPath, syscall.O_RDWR|syscall.O_NOCTTY, 0666)
 	if err != nil {
 		return nil, err
 	}
 
 	defer func() {
-		if err != nil && f != nil {
+		if err != nil {
 			fmt.Printf("[OpenSerialPort] ERROR: %v\n", err)
-			f.Close()
+			syscall.Close(fd)
 		}
 	}()
 
-	fd := f.Fd()
-
-	unix.SetNonblock(int(fd), false)
+	syscall.SetNonblock(fd, false)
 	if err != nil {
 		return nil, fmt.Errorf("[OpenSerialPort] set non block error: %v", err)
 	}
 
 	sp := &SerialPort{
-		file:             f,
 		fd:               fd,
 		extendedDataMode: true,
 		contineScanning:  true,
@@ -163,16 +158,26 @@ func (sp *SerialPort) SetBaudRate(baudrate BaudRate, readTimeout time.Duration) 
 // Write write's the passed byte array to the serial port
 func (sp *SerialPort) Write(b []byte) error {
 	sp.showOutMsg(b)
-	_, err := sp.file.Write(b)
-	sp.stats.TxBytes += uint64(len(b))
+	n, err := syscall.Write(sp.fd, b)
+	sp.stats.TxBytes += uint64(n)
 	return err
 }
 
-func (sp *SerialPort) read() (byte, error) {
-	_, err := sp.file.Read(sp.byteBuf)
-	b := sp.byteBuf[0]
-	sp.stats.RxBytes++
-	return b, err
+func (sp *SerialPort) read(readChan chan byte) error {
+	var err error
+	buff := make([]byte, 1)
+	for sp.contineScanning {
+		n, err := syscall.Read(sp.fd, buff)
+		if err != nil {
+			sp.contineScanning = false
+			break
+		}
+		if n > 0 {
+			sp.stats.RxBytes++
+			readChan <- buff[0]
+		}
+	}
+	return err
 }
 
 // StopScanning sets the continueScanning flag to false
@@ -182,81 +187,68 @@ func (sp *SerialPort) StopScanning() {
 
 // ScanPort reads a complete line from the serial port and sends the bytes
 // to the passed channel
-func (sp *SerialPort) ScanPort(dataChan chan []byte, edmChan chan []byte, errChan chan error) {
+func (sp *SerialPort) ScanPort(ctx context.Context, dataHandler func([]byte), edmHandler func([]byte), errChan chan error) error {
+	var err error
 	fmt.Println("[ScanPort] starting")
-	defer func() {
-		fmt.Println("[ScanPort] exiting")
-		if err := recover(); err != nil {
-			if fmt.Sprintf("%v", err) == "send on closed channel" {
-				// Should be enough to avoid a crash/stack trace on shutdown
-				fmt.Printf("[ScanPort] Caught Panic: %v\n", err)
-			} else {
-				// Other issue, rethrow the panic
-				panic(err)
-			}
-		}
-	}()
+	defer fmt.Println("[ScanPort] exiting")
 
-	sp.contineScanning = true
 	line := []byte{}
 	lineLen := 0
 	expectedLength := -1
 	edmStartReceived := false
+	sp.contineScanning = true
 
-	for sp.contineScanning == true {
-		b, err := sp.read()
-		if err != nil {
-			if err == io.EOF { // ignore EOFs we're going to get them all the time.
-				continue
-			} else {
-				if sp.isOpen {
-					errChan <- errors.Wrap(err, "serial read error")
-				} else {
-					fmt.Printf("[ScanPort] Read error %v\n", err)
-				}
-				break
-			}
-		}
+	rchan := make(chan byte, 1)
+	go sp.read(rchan)
 
-		if sp.extendedDataMode {
-			if !edmStartReceived {
-				if b == EDMStartByte {
-					edmStartReceived = true
-				}
-			}
-			if edmStartReceived {
-				line = append(line, b)
-				lineLen = len(line)
-
-				if expectedLength == -1 && lineLen == 3 {
-					expectedLength = int(binary.BigEndian.Uint16(line[1:3])) + EDMPayloadOverhead
-				} else if lineLen == expectedLength {
-					if line[expectedLength-1] == EDMStopByte {
-						sp.showInMsg(line)
-						edmChan <- line[EDMHeaderSize:expectedLength]
-						line = []byte{}
-						expectedLength = -1
-						edmStartReceived = false
-					} else {
-						errChan <- fmt.Errorf("EDM errof Payload length exceeded (Length: %d %x)", expectedLength, line)
-						line = []byte{}
-						expectedLength = -1
-						edmStartReceived = false
+	for sp.contineScanning {
+		select {
+		case <-ctx.Done():
+			fmt.Printf("[ScanPort] context done")
+			return err
+		case b := <-rchan:
+			if sp.extendedDataMode {
+				if !edmStartReceived {
+					if b == EDMStartByte {
+						edmStartReceived = true
 					}
 				}
-			}
-		} else {
-			line = append(line, b)
-			lineLen = len(line)
-			if bytes.HasSuffix(line, newlineBytes) {
-				if lineLen > 2 {
-					sp.showInMsg(line)
-					dataChan <- line
+				if edmStartReceived {
+					line = append(line, b)
+					lineLen = len(line)
+
+					if expectedLength == -1 && lineLen == 3 {
+						expectedLength = int(binary.BigEndian.Uint16(line[1:3])) + EDMPayloadOverhead
+					} else if lineLen == expectedLength {
+						if line[expectedLength-1] == EDMStopByte {
+							sp.showInMsg(line)
+							edmHandler(line[EDMHeaderSize:expectedLength])
+							line = []byte{}
+							expectedLength = -1
+							edmStartReceived = false
+						} else {
+							errChan <- fmt.Errorf("EDM errof Payload length exceeded (Length: %d %x)", expectedLength, line)
+							line = []byte{}
+							expectedLength = -1
+							edmStartReceived = false
+						}
+					}
 				}
-				line = []byte{}
+			} else {
+				line = append(line, b)
+				lineLen = len(line)
+				if bytes.HasSuffix(line, newlineBytes) {
+					if lineLen > 2 {
+						sp.showInMsg(line)
+						dataHandler(line)
+					}
+					line = []byte{}
+				}
 			}
+
 		}
 	}
+	return err
 }
 
 // Ioctl sends
@@ -326,7 +318,7 @@ func (sp *SerialPort) ResetViaDTR() error {
 
 // Close closes the file
 func (sp *SerialPort) Close() (err error) {
-	err = sp.file.Close()
+	err = syscall.Close(sp.fd)
 	sp.isOpen = false
 	return err
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fortytw2/leaktest"
 	"github.com/google/martian/log"
 )
 
@@ -40,13 +41,11 @@ func accessDevice(ub *UbloxBluetooth, mac string) error {
 }
 
 func TestDoubleDisconnect(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	defer leaktest.Check(t)()
+	ub, err := setupBluetooth()
 	if err != nil {
-		t.Fatalf("InitUbloxBluetooth error %v", err)
+		t.Fatalf("setupBluetooth error %v\n", err)
 	}
-
-	ub, err := btd.GetDevice(0)
-
 	defer ub.Close()
 	ub.serialPort.SetVerbose(true)
 
@@ -138,23 +137,13 @@ func accessDeviceFn(ub *UbloxBluetooth, deviceAddr string) error {
 }
 
 func TestSingleAccess(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	ub, err := setupBluetooth()
 	if err != nil {
-		t.Fatalf("InitUbloxBluetooth error %v", err)
+		t.Fatalf("setupBluetooth error %v\n", err)
 	}
-
-	ub, err := btd.GetDevice(0)
-
 	defer ub.Close()
 	ub.serialPort.SetVerbose(true)
-
-	err = ub.ATCommand()
-	if err != nil {
-		t.Errorf("AT error %v\n", err)
-	}
-
 	accessDevice(ub, os.Getenv("DEVICE_MAC"))
-
 }
 
 func TestMulipleAccesses(t *testing.T) {

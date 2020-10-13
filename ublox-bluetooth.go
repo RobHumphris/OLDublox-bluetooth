@@ -212,7 +212,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 		}
 	}()
 
-	go ub.serialPort.ScanPort(ub.readChannel, ub.EDMChannel, ub.ErrorChannel)
+	go ub.serialPort.ScanPort(ub.ctx, ub.readChannel, ub.EDMChannel, ub.ErrorChannel)
 
 	for {
 		select {

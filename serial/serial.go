@@ -187,9 +187,10 @@ func (sp *SerialPort) StopScanning() {
 
 // ScanPort reads a complete line from the serial port and sends the bytes
 // to the passed channel
-func (sp *SerialPort) ScanPort(ctx context.Context, dataChan chan []byte, edmChan chan []byte, errChan chan error) error {
+func (sp *SerialPort) ScanPort(ctx context.Context, dataHandler func([]byte), edmHandler func([]byte), errChan chan error) error {
 	var err error
 	fmt.Println("[ScanPort] starting")
+	defer fmt.Println("[ScanPort] exiting")
 
 	line := []byte{}
 	lineLen := 0
@@ -221,7 +222,7 @@ func (sp *SerialPort) ScanPort(ctx context.Context, dataChan chan []byte, edmCha
 					} else if lineLen == expectedLength {
 						if line[expectedLength-1] == EDMStopByte {
 							sp.showInMsg(line)
-							edmChan <- line[EDMHeaderSize:expectedLength]
+							edmHandler(line[EDMHeaderSize:expectedLength])
 							line = []byte{}
 							expectedLength = -1
 							edmStartReceived = false
@@ -239,66 +240,13 @@ func (sp *SerialPort) ScanPort(ctx context.Context, dataChan chan []byte, edmCha
 				if bytes.HasSuffix(line, newlineBytes) {
 					if lineLen > 2 {
 						sp.showInMsg(line)
-						dataChan <- line
+						dataHandler(line)
 					}
 					line = []byte{}
 				}
 			}
 
 		}
-
-		/*b, err := sp.read()
-		if err != nil {
-			if err == io.EOF { // ignore EOFs we're going to get them all the time.
-				continue
-			} else {
-				if sp.isOpen {
-					errChan <- errors.Wrap(err, "serial read error")
-				} else {
-					fmt.Printf("[ScanPort] Read error %v\n", err)
-				}
-				break
-			}
-		}
-
-		if sp.extendedDataMode {
-			if !edmStartReceived {
-				if b == EDMStartByte {
-					edmStartReceived = true
-				}
-			}
-			if edmStartReceived {
-				line = append(line, b)
-				lineLen = len(line)
-
-				if expectedLength == -1 && lineLen == 3 {
-					expectedLength = int(binary.BigEndian.Uint16(line[1:3])) + EDMPayloadOverhead
-				} else if lineLen == expectedLength {
-					if line[expectedLength-1] == EDMStopByte {
-						sp.showInMsg(line)
-						edmChan <- line[EDMHeaderSize:expectedLength]
-						line = []byte{}
-						expectedLength = -1ctx
-						edmStartReceived = false
-					} else {
-						errChan <- fmt.Errorf("EDM errof Payload length exceeded (Length: %d %x)", expectedLength, line)
-						line = []byte{}
-						expectedLength = -1
-						edmStartReceived = false
-					}
-				}
-			}
-		} else {
-			line = append(line, b)
-			lineLen = len(line)
-			if bytes.HasSuffix(line, newlineBytes) {
-				if lineLen > 2 {
-					sp.showInMsg(line)
-					dataChan <- line
-				}
-				line = []byte{}
-			}
-		}*/
 	}
 	return err
 }

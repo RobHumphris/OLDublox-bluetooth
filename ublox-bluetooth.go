@@ -68,9 +68,7 @@ type UbloxBluetooth struct {
 	serialNumber       string
 	currentMode        ubloxMode
 	StartEventReceived bool
-	readChannel        chan []byte
 	DataChannel        chan []byte
-	EDMChannel         chan []byte
 	ErrorChannel       chan error
 	CompletedChannel   chan bool
 	ctx                context.Context
@@ -179,9 +177,7 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*Ublo
 		serialNumber:       "",
 		currentMode:        extendedDataMode,
 		StartEventReceived: false,
-		readChannel:        make(chan []byte),
 		DataChannel:        make(chan []byte), // make(chan DataResponse),
-		EDMChannel:         make(chan []byte),
 		ErrorChannel:       make(chan error),
 		CompletedChannel:   make(chan bool),
 		ctx:                ctx, //stopScanning:       make(chan bool),
@@ -212,11 +208,8 @@ func (ub *UbloxBluetooth) serialportReader() {
 		}
 	}()
 
-	go ub.serialPort.ScanPort(ub.ctx, ub.readChannel, ub.EDMChannel, ub.ErrorChannel)
-
-	for {
-		select {
-		case r := <-ub.readChannel:
+	go ub.serialPort.ScanPort(ub.ctx,
+		func(r []byte) {
 			b := bytes.Trim(r, newline)
 			if len(b) != 0 {
 				switch b[0] {
@@ -228,13 +221,17 @@ func (ub *UbloxBluetooth) serialportReader() {
 					ub.handleGeneralMessage(b)
 				}
 			}
-		case edmData := <-ub.EDMChannel:
-			if len(edmData) > 0 {
-				err := ub.ParseEDMMessage(edmData)
+		}, func(e []byte) {
+			if len(e) > 0 {
+				err := ub.ParseEDMMessage(e)
 				if err != nil {
 					ub.ErrorChannel <- err
 				}
 			}
+		}, ub.ErrorChannel)
+
+	for {
+		select {
 		case <-ub.ctx.Done():
 			ub.serialPort.StopScanning()
 			return
@@ -279,9 +276,7 @@ func (ub *UbloxBluetooth) Close() {
 		fmt.Printf("[Close] error %v\n", err)
 	}
 
-	close(ub.readChannel)
 	close(ub.DataChannel)
-	close(ub.EDMChannel)
 	close(ub.CompletedChannel)
 	close(ub.ErrorChannel)
 }

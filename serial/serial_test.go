@@ -9,8 +9,6 @@ import (
 
 func TestSerial(t *testing.T) {
 	timeout := 10 * time.Second
-	readChannel := make(chan []byte)
-	edmChannel := make(chan []byte)
 	errorChannel := make(chan error)
 	sp, err := OpenSerialPort("/dev/ttyUSB0", timeout)
 	if err != nil {
@@ -33,14 +31,16 @@ func TestSerial(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
-	go sp.ScanPort(ctx, readChannel, edmChannel, errorChannel)
+	go sp.ScanPort(ctx,
+		func(b []byte) {
+			fmt.Printf("r: %s\n", b)
+		}, func(b []byte) {
+			fmt.Printf("e: %s\n", b)
+		}, errorChannel)
+
 	go func() {
 		for {
 			select {
-			case r := <-readChannel:
-				fmt.Printf("r: %s\n", r)
-			case e := <-edmChannel:
-				fmt.Printf("e: %s\n", e)
 			case err := <-errorChannel:
 				fmt.Printf("err: %v\n", err)
 			case <-ctx.Done():

@@ -65,6 +65,26 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		}
 		fmt.Printf("[ReadRecorderInfo] SequenceNo: %d. Count: %d. SlotUsage: %d. PoolUsage: %d.\n", info.SequenceNo, info.Count, info.SlotUsage, info.PoolUsage)
 
+		startSeq := info.SequenceNo - uint32(info.Count+2)
+
+		for i := startSeq; i < info.SequenceNo; i++ {
+			metadata, err := ub.QueryRecorderMetaDataCommand(i)
+			if err != nil {
+				if err == ErrorSensorErrorResponse {
+					fmt.Printf("Sequence %d invalid (Error response)", i)
+					continue
+				}
+				fmt.Printf("QueryRecorderMetaDataCommand Error %v\n", err)
+				break
+			}
+			if metadata.Length > 0 {
+				fmt.Printf("Sequence %d is a valid recording\n", i)
+				break
+			} else {
+				fmt.Printf("Sequence %d Metadata Length %d, Crc %d, Valid %t", i, metadata.Length, metadata.Crc, metadata.Valid)
+			}
+		}
+
 		err = ub.ReadRecorder(99999, func(e *VehEvent) error {
 			t.Errorf("This should have returned an Error as we're unlike to have got to slot 99999\n")
 			return nil
@@ -79,7 +99,7 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 
 		var lastSequenceRead uint32
 		dataSequences := []uint32{}
-		err = ub.ReadRecorder(info.SequenceNo, func(e *VehEvent) error {
+		err = ub.ReadRecorder(info.SequenceNo-1, func(e *VehEvent) error {
 			fmt.Printf("Sequence: %d\n", e.Sequence)
 			lastSequenceRead = e.Sequence
 			if e.DataFlag {

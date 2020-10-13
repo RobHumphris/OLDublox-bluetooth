@@ -177,10 +177,10 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*Ublo
 		serialNumber:       "",
 		currentMode:        extendedDataMode,
 		StartEventReceived: false,
-		DataChannel:        make(chan []byte), // make(chan DataResponse),
-		ErrorChannel:       make(chan error),
-		CompletedChannel:   make(chan bool),
-		ctx:                ctx, //stopScanning:       make(chan bool),
+		DataChannel:        make(chan []byte, 1), // make(chan DataResponse),
+		ErrorChannel:       make(chan error, 1),
+		CompletedChannel:   make(chan bool, 1),
+		ctx:                ctx,
 		cancel:             cancel,
 		connectedDevice:    nil,
 		disconnectCount:    0,
@@ -268,13 +268,13 @@ func (ub *UbloxBluetooth) ResetSerial() error {
 
 // Close shuts down the serial port, can closes communication channels.
 func (ub *UbloxBluetooth) Close() {
-	ub.cancel()
-
-	ub.serialPort.StopScanning()
 	err := ub.serialPort.Close()
 	if err != nil {
 		fmt.Printf("[Close] error %v\n", err)
 	}
+
+	ub.cancel()
+	ub.serialPort.StopScanning()
 
 	close(ub.DataChannel)
 	close(ub.CompletedChannel)

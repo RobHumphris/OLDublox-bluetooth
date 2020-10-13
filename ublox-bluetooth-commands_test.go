@@ -112,6 +112,8 @@ func TestUbloxBluetoothCommands(t *testing.T) {
 		return err
 	}, ub, t)
 
+	ub.Close()
+
 	if err != nil {
 		t.Errorf("exerciseTheDevice error %v\n", err)
 	}

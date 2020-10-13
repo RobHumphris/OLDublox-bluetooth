@@ -87,7 +87,7 @@ const (
 
 // OpenSerialPort opens a Ublox device with a timeout value
 func OpenSerialPort(devPath string, readTimeout time.Duration) (p *SerialPort, err error) {
-	fd, err := syscall.Open(devPath, syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_NONBLOCK, 0666)
+	fd, err := syscall.Open(devPath, syscall.O_RDWR|syscall.O_NOCTTY, 0666)
 	if err != nil {
 		return nil, err
 	}

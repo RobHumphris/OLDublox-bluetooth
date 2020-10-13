@@ -343,6 +343,8 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 			return nil, e
 		case <-time.After(ub.timeout):
 			return nil, ErrTimeout
+		case <-ub.ctx.Done():
+			return nil, nil
 		}
 	}
 }
@@ -415,6 +417,8 @@ func (ub *UbloxBluetooth) HandleDataDownload(expected int, commandReply string, 
 			}
 		case <-time.After(ub.timeout):
 			return ErrTimeout
+		case <-ub.ctx.Done():
+			return nil
 		}
 	}
 }
@@ -433,6 +437,8 @@ func (ub *UbloxBluetooth) WaitOnDataChannel(fn DataMessageHandler) error {
 			return e
 		case <-time.After(ub.timeout):
 			return ErrTimeout
+		case <-ub.ctx.Done():
+			return nil
 		}
 	}
 }
@@ -457,6 +463,8 @@ func (ub *UbloxBluetooth) HandleDiscovery(expectedResponse string, fn Discoveryh
 			return e
 		case <-time.After(ub.timeout):
 			return ErrTimeout
+		case <-ub.ctx.Done():
+			return nil
 		}
 	}
 }

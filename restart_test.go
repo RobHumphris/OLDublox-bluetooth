@@ -99,11 +99,6 @@ func TestRestart(t *testing.T) {
 		handleFatal("AT - 0 error", err)
 	}
 
-	/*err = bt.EnterExtendedDataMode()
-	if err != nil {
-		handleFatal("EnterExtendedDataMode error", err)
-	}*/
-
 	err = ub.ATCommand()
 	if err != nil {
 		handleFatal("AT - 1 error", err)

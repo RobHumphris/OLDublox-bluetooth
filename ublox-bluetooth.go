@@ -338,8 +338,6 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 			} else {
 				return d, nil
 			}
-		/*case e := <-ub.ErrorChannel:
-		return nil, e*/
 		case <-time.After(ub.timeout):
 			return nil, ErrTimeout
 		case <-ub.ctx.Done():
@@ -432,8 +430,6 @@ func (ub *UbloxBluetooth) WaitOnDataChannel(fn DataMessageHandler) error {
 			if !loop {
 				return err
 			}
-		/*case e := <-ub.ErrorChannel:
-		return e*/
 		case <-time.After(ub.timeout):
 			return ErrTimeout
 		case <-ub.ctx.Done():
@@ -458,8 +454,6 @@ func (ub *UbloxBluetooth) HandleDiscovery(expectedResponse string, fn Discoveryh
 			}
 		case _ = <-ub.CompletedChannel:
 			return err
-		/*case e := <-ub.ErrorChannel:
-		return e*/
 		case <-time.After(ub.timeout):
 			return ErrTimeout
 		case <-ub.ctx.Done():
@@ -486,15 +480,7 @@ func (ub *UbloxBluetooth) handleGeneralMessage(b []byte) {
 	switch str {
 	case okMessage:
 		ub.CompletedChannel <- true
-		/*case errorMessage:
-			ub.ErrorChannel <- fmt.Errorf(str)
-		default:
-			ub.ErrorChannel <- fmt.Errorf("Cannot handle message %q", str)*/
 	}
-}
-
-func (ub *UbloxBluetooth) handleUnknownPayload(t string, p string) {
-	/*ub.ErrorChannel <- fmt.Errorf("Unknown token %s payload %s", t, p)*/
 }
 
 // GetSerialPort retrieves the serial port

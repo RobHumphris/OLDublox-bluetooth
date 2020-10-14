@@ -72,15 +72,6 @@ func (ub *UbloxBluetooth) RebootUblox() error {
 	return err
 }
 
-// GetDeviceRSSI gets the Recieved Signal Strength for the `address`
-/*func (ub *UbloxBluetooth) GetDeviceRSSI(address string) (string, error) {
-	d, err := ub.writeAndWait(GetRSSICommand(address), true)
-	if err != nil {
-		return "??", err
-	}
-	return ProcessRSSIReply(d)
-}*/
-
 // SetDTRBehavior configures the device to the correct DTR behaviour
 func (ub *UbloxBluetooth) SetDTRBehavior() error {
 	_, err := ub.writeAndWait(SetDTRBehaviorCommand(4), false)

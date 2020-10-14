@@ -8,13 +8,17 @@ import (
 
 var bt *UbloxBluetooth
 
+func testErrorHandler(err error) {
+	fmt.Printf("genericErrorHandler: %v\n", err)
+}
+
 func handleFatal(s string, err error) {
 	bt.Close()
 	log.Fatalf("%s %v\n", s, err)
 }
 
 func TestResetWatchdog(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -36,7 +40,7 @@ func TestResetWatchdog(t *testing.T) {
 }
 
 func TestSetWatchdog(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -60,7 +64,7 @@ func TestSetWatchdog(t *testing.T) {
 func TestRestartViaDTR(t *testing.T) {
 	var err error
 
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -80,7 +84,7 @@ func TestRestartViaDTR(t *testing.T) {
 
 func TestRestart(t *testing.T) {
 	var err error
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -94,11 +98,6 @@ func TestRestart(t *testing.T) {
 	if err != nil {
 		handleFatal("AT - 0 error", err)
 	}
-
-	/*err = bt.EnterExtendedDataMode()
-	if err != nil {
-		handleFatal("EnterExtendedDataMode error", err)
-	}*/
 
 	err = ub.ATCommand()
 	if err != nil {

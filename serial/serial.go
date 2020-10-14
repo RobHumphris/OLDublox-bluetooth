@@ -187,7 +187,7 @@ func (sp *SerialPort) StopScanning() {
 
 // ScanPort reads a complete line from the serial port and sends the bytes
 // to the passed channel
-func (sp *SerialPort) ScanPort(ctx context.Context, dataHandler func([]byte), edmHandler func([]byte), errChan chan error) error {
+func (sp *SerialPort) ScanPort(ctx context.Context, dataHandler func([]byte), edmHandler func([]byte), errHandler func(error)) error {
 	var err error
 	fmt.Println("[ScanPort] starting")
 	defer fmt.Println("[ScanPort] exiting")
@@ -227,7 +227,7 @@ func (sp *SerialPort) ScanPort(ctx context.Context, dataHandler func([]byte), ed
 							expectedLength = -1
 							edmStartReceived = false
 						} else {
-							errChan <- fmt.Errorf("EDM errof Payload length exceeded (Length: %d %x)", expectedLength, line)
+							errHandler(fmt.Errorf("EDM errof Payload length exceeded (Length: %d %x)", expectedLength, line))
 							line = []byte{}
 							expectedLength = -1
 							edmStartReceived = false

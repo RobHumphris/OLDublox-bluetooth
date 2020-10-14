@@ -8,7 +8,7 @@ import (
 )
 
 func TestSettingDTR(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -35,7 +35,7 @@ func TestSettingDTR(t *testing.T) {
 }
 
 func TestSettingDTRAction(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -67,7 +67,7 @@ func TestSettingDTRAction(t *testing.T) {
 }
 
 func TestDongleReboot(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}

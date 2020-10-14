@@ -13,7 +13,7 @@ import (
 
 func TestMultipleConnects(t *testing.T) {
 	defer leaktest.Check(t)()
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}

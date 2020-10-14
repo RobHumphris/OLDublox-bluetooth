@@ -9,7 +9,7 @@ import (
 
 // TestDiscovery
 func TestDiscoverySingle(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -59,7 +59,7 @@ func TestDiscoverySingle(t *testing.T) {
 }
 
 func TestDiscoverySingleCancel(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -112,7 +112,7 @@ func TestDiscoverySingleCancel(t *testing.T) {
 }
 
 func TestDiscoveryMulti(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -148,7 +148,7 @@ func TestDiscoveryMulti(t *testing.T) {
 }
 
 func TestDiscoveryMultiCancel(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}

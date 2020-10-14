@@ -147,7 +147,7 @@ func TestSingleAccess(t *testing.T) {
 }
 
 func TestMulipleAccesses(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}

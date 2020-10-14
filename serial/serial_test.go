@@ -9,7 +9,6 @@ import (
 
 func TestSerial(t *testing.T) {
 	timeout := 10 * time.Second
-	errorChannel := make(chan error)
 	sp, err := OpenSerialPort("/dev/ttyUSB0", timeout)
 	if err != nil {
 		t.Fatalf("Open Port Error %v\n", err)
@@ -36,13 +35,13 @@ func TestSerial(t *testing.T) {
 			fmt.Printf("r: %s\n", b)
 		}, func(b []byte) {
 			fmt.Printf("e: %s\n", b)
-		}, errorChannel)
+		}, func(err error) {
+			fmt.Printf("Error: %v\n", err)
+		})
 
 	go func() {
 		for {
 			select {
-			case err := <-errorChannel:
-				fmt.Printf("err: %v\n", err)
 			case <-ctx.Done():
 				fmt.Println("Done")
 				return

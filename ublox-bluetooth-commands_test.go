@@ -214,7 +214,7 @@ func TestRebootUblox(t *testing.T) {
 
 func setupBluetooth() (*UbloxBluetooth, error) {
 	os.Setenv("DEVICE_MAC", "EAA4997A81C4r")
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		return nil, errors.Wrap(err, "NewUbloxBluetooth error")
 	}

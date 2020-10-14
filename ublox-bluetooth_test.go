@@ -11,7 +11,7 @@ import (
 )
 
 func TestATCommand(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -55,7 +55,7 @@ func TestATCommand(t *testing.T) {
 }
 
 func TestMultiPortInitialisation(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -93,7 +93,7 @@ func TestMultiPortInitialisation(t *testing.T) {
 }
 
 func TestDualATControl(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}
@@ -183,7 +183,7 @@ func TestDualATControl(t *testing.T) {
 }
 
 func TestGetSerialNumber(t *testing.T) {
-	btd, err := InitUbloxBluetooth(timeout)
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
 	}

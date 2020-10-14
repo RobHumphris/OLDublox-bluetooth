@@ -69,8 +69,8 @@ type UbloxBluetooth struct {
 	currentMode        ubloxMode
 	StartEventReceived bool
 	DataChannel        chan []byte
-	ErrorChannel       chan error
 	CompletedChannel   chan bool
+	errorHandler       func(error)
 	ctx                context.Context
 	cancel             context.CancelFunc
 	connectedDevice    *ConnectionReply
@@ -128,7 +128,7 @@ func (btd *BluetoothDevices) CloseAll() error {
 }
 
 // InitUbloxBluetooth creates a new UbloxBluetooth instance
-func InitUbloxBluetooth(timeout time.Duration) (*BluetoothDevices, error) {
+func InitUbloxBluetooth(timeout time.Duration, onError func(error)) (*BluetoothDevices, error) {
 	btd := &BluetoothDevices{}
 	serialPorts, err := serial.GetFTDIDevPaths()
 	if err != nil {
@@ -141,7 +141,7 @@ func InitUbloxBluetooth(timeout time.Duration) (*BluetoothDevices, error) {
 
 	btd.Bt = make([]*UbloxBluetooth, len(serialPorts))
 	for idx, sp := range serialPorts {
-		btd.Bt[idx], err = newUbloxBluetooth(sp, timeout)
+		btd.Bt[idx], err = newUbloxBluetooth(sp, timeout, onError)
 	}
 
 	for _, ub := range btd.Bt {
@@ -154,7 +154,7 @@ func InitUbloxBluetooth(timeout time.Duration) (*BluetoothDevices, error) {
 }
 
 // NewUbloxBluetooth creates a new UbloxBluetooth instance
-func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*UbloxBluetooth, error) {
+func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration, onError func(error)) (*UbloxBluetooth, error) {
 	sp, err := serial.OpenSerialPort(serialID.SerialPort, timeout)
 	if err != nil {
 		return nil, err
@@ -177,9 +177,9 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration) (*Ublo
 		serialNumber:       "",
 		currentMode:        extendedDataMode,
 		StartEventReceived: false,
-		DataChannel:        make(chan []byte, 1), // make(chan DataResponse),
-		ErrorChannel:       make(chan error, 1),
+		DataChannel:        make(chan []byte, 1),
 		CompletedChannel:   make(chan bool, 1),
+		errorHandler:       onError,
 		ctx:                ctx,
 		cancel:             cancel,
 		connectedDevice:    nil,
@@ -225,10 +225,10 @@ func (ub *UbloxBluetooth) serialportReader() {
 			if len(e) > 0 {
 				err := ub.ParseEDMMessage(e)
 				if err != nil {
-					ub.ErrorChannel <- err
+					ub.errorHandler(err)
 				}
 			}
-		}, ub.ErrorChannel)
+		}, ub.errorHandler)
 
 	for {
 		select {
@@ -278,7 +278,6 @@ func (ub *UbloxBluetooth) Close() {
 
 	close(ub.DataChannel)
 	close(ub.CompletedChannel)
-	close(ub.ErrorChannel)
 }
 
 // SetCommsRate sets the rate to either: Default BaudRate, or HighSpeed
@@ -339,8 +338,8 @@ func (ub *UbloxBluetooth) WaitForResponse(expectedResponse string, waitForData b
 			} else {
 				return d, nil
 			}
-		case e := <-ub.ErrorChannel:
-			return nil, e
+		/*case e := <-ub.ErrorChannel:
+		return nil, e*/
 		case <-time.After(ub.timeout):
 			return nil, ErrTimeout
 		case <-ub.ctx.Done():
@@ -433,8 +432,8 @@ func (ub *UbloxBluetooth) WaitOnDataChannel(fn DataMessageHandler) error {
 			if !loop {
 				return err
 			}
-		case e := <-ub.ErrorChannel:
-			return e
+		/*case e := <-ub.ErrorChannel:
+		return e*/
 		case <-time.After(ub.timeout):
 			return ErrTimeout
 		case <-ub.ctx.Done():
@@ -459,8 +458,8 @@ func (ub *UbloxBluetooth) HandleDiscovery(expectedResponse string, fn Discoveryh
 			}
 		case _ = <-ub.CompletedChannel:
 			return err
-		case e := <-ub.ErrorChannel:
-			return e
+		/*case e := <-ub.ErrorChannel:
+		return e*/
 		case <-time.After(ub.timeout):
 			return ErrTimeout
 		case <-ub.ctx.Done():
@@ -487,15 +486,15 @@ func (ub *UbloxBluetooth) handleGeneralMessage(b []byte) {
 	switch str {
 	case okMessage:
 		ub.CompletedChannel <- true
-	case errorMessage:
-		ub.ErrorChannel <- fmt.Errorf(str)
-	default:
-		ub.ErrorChannel <- fmt.Errorf("Cannot handle message %q", str)
+		/*case errorMessage:
+			ub.ErrorChannel <- fmt.Errorf(str)
+		default:
+			ub.ErrorChannel <- fmt.Errorf("Cannot handle message %q", str)*/
 	}
 }
 
 func (ub *UbloxBluetooth) handleUnknownPayload(t string, p string) {
-	ub.ErrorChannel <- fmt.Errorf("Unknown token %s payload %s", t, p)
+	/*ub.ErrorChannel <- fmt.Errorf("Unknown token %s payload %s", t, p)*/
 }
 
 // GetSerialPort retrieves the serial port

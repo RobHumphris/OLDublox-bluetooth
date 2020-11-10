@@ -71,6 +71,16 @@ const aclConnectionRemoteDeviceResponseString = "+UUBTACLC:"
 const disconnectPeer = "+UDCPC"
 const disconnectPeerResponseString = "+UUDPD:"
 
+const setOobTemporaryKey = "+UBTOTK"
+const oobTemporaryKey = "00112233445566778899AABBCCDDEEFF"
+const setOobSecurityMode = "+UBTSM"
+const securityDisabled uint = 1
+const securityEnabled uint = 2
+const securityEnabledDisplayOnly uint = 3
+const securityEnabledDisplayYesNo uint = 4
+const securityEnabledDisplayKeyboardOnly uint = 5
+const securityEnabledOutOfBand uint = 6
+
 const readEscapeCharacter = "S2"
 const escapeSequence = "+++"
 const enterDataMode = "ATO1"

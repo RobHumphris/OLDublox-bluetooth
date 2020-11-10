@@ -243,3 +243,19 @@ func GetSerialCommand() CmdResp {
 		Resp: quotedStringResponse,
 	}
 }
+
+// SetOobTemporaryKeyCommand creates the command
+func SetOobTemporaryKeyCommand(key string) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT%s=1,%s", setOobTemporaryKey, key),
+		Resp: empty,
+	}
+}
+
+// setOobSecurityModeCommand creates the command
+func setOobSecurityModeCommand(mode uint) CmdResp {
+	return CmdResp{
+		Cmd:  fmt.Sprintf("AT%s=%v", setOobSecurityMode, mode),
+		Resp: empty,
+	}
+}

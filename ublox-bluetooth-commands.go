@@ -164,6 +164,11 @@ func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent,
 	var d []byte
 	var cr *ConnectionReply
 
+	err = ub.ConfigureSecurity(oobTemporaryKey, securityEnabledOutOfBand)
+	if err != nil {
+		return err
+	}
+
 	d, err = ub.writeAndWait(ConnectCommand(address), true)
 	if err != nil {
 		return err

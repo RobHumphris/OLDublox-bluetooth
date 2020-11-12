@@ -49,6 +49,8 @@ var (
 	ErrorSensorErrorResponse = fmt.Errorf("sensor error")
 	// ErrorUnexpectedResponse is a type of error that may not be catastrophic - just unexpected
 	ErrorUnexpectedResponse = fmt.Errorf("UnexpectedResponse")
+	// ErrorTruncatedResponse is a type of error that may not be catastrophic - just unexpected
+	ErrorTruncatedResponse = fmt.Errorf("TruncatedResponse")
 )
 
 func splitOutResponse(d []byte, command string) (string, error) {

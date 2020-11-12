@@ -96,6 +96,10 @@ func init() {
 
 // NewRecorderEvent returns new RecorderEvent
 func NewRecorderEvent(b []byte) (*VehEvent, error) {
+	if len(b) < 10 {
+		return nil, ErrorTruncatedResponse
+	}
+
 	fn, ok := handlers[b[8]]
 	if ok {
 		return fn(b), nil

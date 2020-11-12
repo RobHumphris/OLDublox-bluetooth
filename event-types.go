@@ -96,7 +96,7 @@ func init() {
 
 // NewRecorderEvent returns new RecorderEvent
 func NewRecorderEvent(b []byte) (*VehEvent, error) {
-	if len(b) < 10 {
+	if len(b) < 9 {
 		return nil, ErrorTruncatedResponse
 	}
 

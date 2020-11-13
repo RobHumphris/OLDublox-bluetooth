@@ -127,6 +127,17 @@ func (btd *BluetoothDevices) CloseAll() error {
 	})
 }
 
+// EncrptComms Switch bluetooth comms encryption on/off
+func (btd *BluetoothDevices) EncrptComms(enabled bool) error {
+	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
+		if enabled {
+			return ub.ConfigureSecurity(oobTemporaryKey, securityEnabledOutOfBand)
+		} else {
+			return ub.ConfigureSecurity("", securityDisabled)
+		}
+	})
+}
+
 // InitUbloxBluetooth creates a new UbloxBluetooth instance
 func InitUbloxBluetooth(timeout time.Duration, onError func(error)) (*BluetoothDevices, error) {
 	btd := &BluetoothDevices{}

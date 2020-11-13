@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/8power/ublox-bluetooth/serial"
@@ -47,7 +48,22 @@ func (ub *UbloxBluetooth) getSerialNumber() (string, error) {
 
 	lines := bytes.Split(sn, []byte("\r\n"))
 	if len(lines) > 0 {
-		return string(lines[0]), nil
+		return strings.Trim(string(lines[0]), "\""), nil
+	}
+
+	return "Unknown", nil
+}
+
+// getLocalName retrieves the local name of the dongle (which will be set to the 8power 16 digit serial number)
+func (ub *UbloxBluetooth) getLocalName() (string, error) {
+	sn, err := ub.writeAndWait(GetLocalName(), true)
+	if err != nil {
+		return "", err
+	}
+
+	lines := bytes.Split(sn, []byte("\r\n"))
+	if len(lines) > 0 {
+		return strings.Trim(string(lines[0]), "\""), nil
 	}
 
 	return "Unknown", nil

@@ -259,3 +259,11 @@ func setOobSecurityModeCommand(mode uint) CmdResp {
 		Resp: empty,
 	}
 }
+
+// GetLocalName creates the command
+func GetLocalName() CmdResp {
+	return CmdResp{
+		Cmd:  at + getLocalName,
+		Resp: getLocalNameRespString,
+	}
+}

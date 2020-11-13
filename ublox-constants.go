@@ -15,6 +15,8 @@ var rs232SettingsResponse = []byte(rs232SettingsResponseString)
 const echoOff = "ATE0"
 const storeConfig = "AT&W"
 const getSerialCmd = "+CGSN"
+const getLocalName = "+UBTLN?"
+const getLocalNameRespString = "+UBTLN:"
 
 const powerOff = "+CPWROFF"
 const rebootResponseString = "+STARTUP"

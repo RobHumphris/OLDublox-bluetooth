@@ -129,10 +129,15 @@ func (btd *BluetoothDevices) CloseAll() error {
 }
 
 // EncryptComms Switch bluetooth comms encryption on/off
-func (btd *BluetoothDevices) EncryptComms(enabled bool) error {
+func (btd *BluetoothDevices) EncryptComms(enabled bool, key string) error {
+	// If no key passed, use temporary one
+	if key == "" {
+		key = oobTemporaryKey
+	}
+
 	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
 		if enabled {
-			return ub.ConfigureSecurity(oobTemporaryKey, securityEnabledOutOfBand)
+			return ub.ConfigureSecurity(key, securityEnabledOutOfBand)
 		} else {
 			return ub.ConfigureSecurity("", securityDisabled)
 		}

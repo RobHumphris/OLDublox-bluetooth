@@ -3,6 +3,7 @@ package ubloxbluetooth
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 )
@@ -68,7 +69,7 @@ func TestDiscoverySingleCancel(t *testing.T) {
 
 	defer ub.Close()
 
-	ub.serialPort.SetVerbose(false)
+	ub.serialPort.SetVerbose(true)
 
 	err = ub.ATCommand()
 	if err != nil {
@@ -155,7 +156,7 @@ func TestDiscoveryMultiCancel(t *testing.T) {
 
 	defer btd.CloseAll()
 
-	btd.SetVerbose(false)
+	btd.SetVerbose(true)
 
 	scan := 10 * time.Second
 	ctx, cancel := context.WithCancel(context.Background())
@@ -181,7 +182,47 @@ func TestDiscoveryMultiCancel(t *testing.T) {
 	}()
 
 	err = btd.MultiDiscoverWithContext(ctx, scan, drChan)
-	cancel()
+	//	cancel()
+	fmt.Printf("Ran for %d seconds: %v\n", int32(time.Now().Unix())-timestamp, err)
 
-	fmt.Printf("Ran for %d seconds\n", int32(time.Now().Unix())-timestamp)
+	ub, err := btd.GetDevice(0)
+
+	for i := 0; i < 2; i++ {
+		ub.ConnectToDevice(os.Getenv("DEVICE_MAC"), func(ub *UbloxBluetooth) error {
+			err := ub.EnableIndications()
+			if err != nil {
+				t.Errorf("[EnableIndications] %v\n", err)
+			}
+
+			err = ub.EnableNotifications()
+			if err != nil {
+				t.Errorf("[EnableNotifications] %v\n", err)
+			}
+
+			_, err = ub.UnlockDevice(password)
+			if err != nil {
+				t.Errorf("[UnlockDevice] %v\n", err)
+			}
+
+			info, err := ub.GetTime()
+			if err != nil {
+				t.Errorf("[GetTime] %v\n", err)
+			}
+			fmt.Printf("[GetTime] replied with: %v\n", info)
+
+			err = ub.DisconnectFromDevice()
+			if err != nil {
+				t.Errorf("[DisconnectFromDevice] First %v\n", err)
+			}
+
+			err = ub.DisconnectFromDevice()
+			if err != nil && err.Error() != "ConnectionReply is nil" {
+				t.Errorf("[DisconnectFromDevice] Second %v\n", err)
+			}
+			return nil
+		}, func(ub *UbloxBluetooth) error {
+			return fmt.Errorf("disconnected")
+		})
+	}
+
 }

@@ -15,6 +15,8 @@ var rs232SettingsResponse = []byte(rs232SettingsResponseString)
 const echoOff = "ATE0"
 const storeConfig = "AT&W"
 const getSerialCmd = "+CGSN"
+const getLocalName = "+UBTLN?"
+const getLocalNameRespString = "+UBTLN:"
 
 const powerOff = "+CPWROFF"
 const rebootResponseString = "+STARTUP"
@@ -70,6 +72,12 @@ const aclConnectionRemoteDeviceResponseString = "+UUBTACLC:"
 
 const disconnectPeer = "+UDCPC"
 const disconnectPeerResponseString = "+UUDPD:"
+
+const setOobTemporaryKey = "+UBTOTK"
+const oobTemporaryKey = "00112233445566778899AABBCCDDEEFF"
+const setOobSecurityMode = "+UBTSM"
+const securityDisabled uint = 1
+const securityEnabledOutOfBand uint = 6
 
 const readEscapeCharacter = "S2"
 const escapeSequence = "+++"

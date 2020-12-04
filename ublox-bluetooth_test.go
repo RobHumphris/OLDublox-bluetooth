@@ -3,7 +3,6 @@ package ubloxbluetooth
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -182,7 +181,7 @@ func TestDualATControl(t *testing.T) {
 	}
 }
 
-func TestGetSerialNumber(t *testing.T) {
+func TestGetDongleSerialNumber(t *testing.T) {
 	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
 	if err != nil {
 		t.Fatalf("InitUbloxBluetooth error %v", err)
@@ -205,9 +204,38 @@ func TestGetSerialNumber(t *testing.T) {
 		t.Errorf("AT error %v\n", err)
 	}
 
+	sn2 := ub.GetDongleSerialNumber()
+
+	if sn != sn2 {
+		t.Errorf("Serial number mismatch: %v != %v\n", sn, sn2)
+	}
+}
+
+func TestGetSerialNumber(t *testing.T) {
+	btd, err := InitUbloxBluetooth(timeout, testErrorHandler)
+	if err != nil {
+		t.Fatalf("InitUbloxBluetooth error %v", err)
+	}
+
+	ub, err := btd.GetDevice(0)
+
+	defer ub.Close()
+
+	ub.serialPort.SetVerbose(true)
+
+	sn, err := ub.getLocalName()
+	if err != nil {
+		t.Errorf("AT error %v\n", err)
+	}
+	fmt.Printf("Serial No: %v\n", sn)
+
+	err = ub.ATCommand()
+	if err != nil {
+		t.Errorf("AT error %v\n", err)
+	}
+
 	sn2 := ub.GetSerialNumber()
 
-	sn = strings.Trim(sn, "\"")
 	if sn != sn2 {
 		t.Errorf("Serial number mismatch: %v != %v\n", sn, sn2)
 	}

@@ -65,7 +65,8 @@ type UbloxBluetooth struct {
 	deviceIndex        uint8
 	serialID           *serial.BtdSerial
 	serialPort         *serial.SerialPort
-	serialNumber       string
+	dongleSerialNumber string // This is the dongle native serial number
+	serialNumber       string // This is the "LocalName" which is programmed to be the 8power 16 digit serial number in production
 	currentMode        ubloxMode
 	StartEventReceived bool
 	DataChannel        chan []byte
@@ -127,6 +128,22 @@ func (btd *BluetoothDevices) CloseAll() error {
 	})
 }
 
+// EncryptComms Switch bluetooth comms encryption on/off
+func (btd *BluetoothDevices) EncryptComms(enabled bool, key string) error {
+	// If no key passed, use temporary one
+	if key == "" {
+		key = oobTemporaryKey
+	}
+
+	return btd.ForEachDevice(func(ub *UbloxBluetooth) error {
+		if enabled {
+			return ub.ConfigureSecurity(key, securityEnabledOutOfBand)
+		} else {
+			return ub.ConfigureSecurity("", securityDisabled)
+		}
+	})
+}
+
 // InitUbloxBluetooth creates a new UbloxBluetooth instance
 func InitUbloxBluetooth(timeout time.Duration, onError func(error)) (*BluetoothDevices, error) {
 	btd := &BluetoothDevices{}
@@ -146,8 +163,8 @@ func InitUbloxBluetooth(timeout time.Duration, onError func(error)) (*BluetoothD
 
 	for _, ub := range btd.Bt {
 		// read the serial number
-		ub.serialNumber, err = ub.getSerialNumber()
-		ub.serialNumber = strings.Trim(ub.serialNumber, "\"")
+		ub.dongleSerialNumber, err = ub.getSerialNumber()
+		ub.serialNumber, err = ub.getLocalName()
 	}
 
 	return btd, nil
@@ -174,7 +191,7 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration, onErro
 		deviceIndex:        discoveryIndex,
 		serialID:           serialID,
 		serialPort:         sp,
-		serialNumber:       "",
+		dongleSerialNumber: "",
 		currentMode:        extendedDataMode,
 		StartEventReceived: false,
 		DataChannel:        make(chan []byte, 1),
@@ -488,7 +505,12 @@ func (ub *UbloxBluetooth) GetSerialPort() string {
 	return ub.serialID.SerialPort
 }
 
-// GetSerialNumber retrieves this dongles serial number
+// GetDongleSerialNumber retrieves this dongles manufacturer serial number
+func (ub *UbloxBluetooth) GetDongleSerialNumber() string {
+	return ub.dongleSerialNumber
+}
+
+// GetSerialNumber retrieves this dongles local name which should be set to the 8power 16 digit serial number
 func (ub *UbloxBluetooth) GetSerialNumber() string {
 	return ub.serialNumber
 }

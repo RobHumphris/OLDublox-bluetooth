@@ -288,6 +288,7 @@ func (ub *UbloxBluetooth) ReadRecorder(sequence uint32, fn func(*VehEvent) error
 			if err != nil {
 				return err
 			}
+
 			ve, err := NewRecorderEvent(b)
 			if err == nil {
 				return fn(ve)

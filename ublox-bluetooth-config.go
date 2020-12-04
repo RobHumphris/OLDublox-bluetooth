@@ -118,3 +118,18 @@ func (ub *UbloxBluetooth) SetWatchdogConfiguration() error {
 func (ub *UbloxBluetooth) ResetWatchdogConfiguration() error {
 	return ub.watchdogConfiguration(0, 0)
 }
+
+// ConfigureSecurity setups the encyption on comms
+func (ub *UbloxBluetooth) ConfigureSecurity(key string, mode uint) error {
+	_, err := ub.writeAndWait(SetOobTemporaryKeyCommand(key), false)
+	if err != nil {
+		return errors.Wrap(err, "Error setting OOP temp key")
+	}
+
+	_, err = ub.writeAndWait(setOobSecurityModeCommand(mode), false)
+	if err != nil {
+		return errors.Wrap(err, "Error setting Security mode")
+	}
+
+	return nil
+}

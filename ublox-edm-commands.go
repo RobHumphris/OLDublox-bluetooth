@@ -76,29 +76,33 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 		return fmt.Errorf("Message does not start with 0x00")
 	}
 
-	data := removeNewlines(msg[2 : len(msg)-1])
-	switch msg[1] {
-	case StartEvent:
-		ub.StartEventReceived = true
-	case ATConfirmation:
-		switch data[0] {
-		case '+':
-			ub.DataChannel <- data
-		case '"':
-			ub.DataChannel <- data[:len(data)-2]
-			ub.CompletedChannel <- true
-		default:
-			ub.handleGeneralMessage(data)
-		}
-	case ATEvent:
-		ub.DataChannel <- data
-
-		// we check for disconnect events disconnectResponse
-		if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
-			if ub.disconnectHandler != nil {
-				go ub.disconnectHandler(ub)
+	m := bytes.TrimPrefix(msg[2:len(msg)-1], []byte(newline))
+	m = bytes.TrimSuffix(m, []byte(newline))
+	dataLines := bytes.Split(m, []byte(newline))
+	// data := removeNewlines(msg[2 : len(msg)-1])
+	for _, data := range dataLines {
+		switch msg[1] {
+		case StartEvent:
+			ub.StartEventReceived = true
+		case ATConfirmation:
+			switch data[0] {
+			case '+':
+				ub.DataChannel <- data
+			case '"':
+				ub.DataChannel <- data
+			default:
+				ub.handleGeneralMessage(data)
 			}
-			return ErrUnexpectedDisconnect
+		case ATEvent:
+			ub.DataChannel <- data
+
+			// we check for disconnect events disconnectResponse
+			if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
+				if ub.disconnectHandler != nil {
+					go ub.disconnectHandler(ub)
+				}
+				return ErrUnexpectedDisconnect
+			}
 		}
 	}
 	return nil

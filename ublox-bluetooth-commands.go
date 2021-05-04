@@ -155,23 +155,29 @@ func (btd *BluetoothDevices) MultiDiscoverWithContext(ctx context.Context, scant
 
 // discoveryCommandWithContext issues discovery command and handles the replies, with a context to cancel
 func (ub *UbloxBluetooth) discoveryCommandWithContext(ctx context.Context, scantime time.Duration, drChan chan *DiscoveryReply, ec chan error) {
-	scanPeriod := int(scantime / time.Millisecond)
-	dc := DiscoveryCommand(scanPeriod)
-	err := ub.Write(dc.Cmd)
+	// This is to double chck the serial port is responsive before
+	err := ub.ATCommand()
 	if err != nil {
 		ec <- err
-	}
+	} else {
+		scanPeriod := int(scantime / time.Millisecond)
+		dc := DiscoveryCommand(scanPeriod)
+		err := ub.Write(dc.Cmd)
+		if err != nil {
+			ec <- err
+		} else {
+			errChan := make(chan error, 1)
+			go func() {
+				errChan <- ub.handleDiscovery(dc.Resp, drChan)
+			}()
 
-	errChan := make(chan error, 1)
-	go func() {
-		errChan <- ub.handleDiscovery(dc.Resp, drChan)
-	}()
-
-	select {
-	case e := <-errChan:
-		ec <- e
-	case <-ctx.Done():
-		ec <- ErrorContextCancelled
+			select {
+			case e := <-errChan:
+				ec <- e
+			case <-ctx.Done():
+				ec <- ErrorContextCancelled
+			}
+		}
 	}
 }
 

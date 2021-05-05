@@ -54,3 +54,17 @@ func (ub *UbloxBluetooth) EnterCommandMode() error {
 func (ub *UbloxBluetooth) ResetUblox() error {
 	return ub.serialPort.ResetViaDTR()
 }
+
+// ResetUblox calls the Serial port's ResetViaDTR and does not return until
+// the ublox module has indicated it is ready
+func (ub *UbloxBluetooth) ResetUbloxSync() error {
+	err := ub.serialPort.ResetViaDTR()
+
+	if err != nil {
+		return errors.Wrap(err, "[ResetUblox] error")
+	}
+
+	_, err = ub.WaitForResponse(rebootResponseString, false)
+
+	return err
+}

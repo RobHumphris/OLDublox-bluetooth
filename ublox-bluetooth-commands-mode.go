@@ -56,9 +56,13 @@ func (ub *UbloxBluetooth) ResetUblox() error {
 	return ub.serialPort.ResetViaDTR()
 }
 
-// ResetUblox calls the Serial port's ResetViaDTR and does not return until
+// ResetUbloxSync calls the Serial port's ResetViaDTR and does not return until
 // the ublox module has indicated it is ready
 func (ub *UbloxBluetooth) ResetUbloxSync() error {
+	if ub.rebootExpected {
+		return fmt.Errorf("[ResetUblox] Reset outstanding error")
+	}
+
 	ub.rebootExpected = true
 	err := ub.serialPort.ResetViaDTR()
 
@@ -71,7 +75,7 @@ func (ub *UbloxBluetooth) ResetUbloxSync() error {
 
 	case <-time.After(time.Second * 4):
 		// Should take no more than a second for 750/751. 753/754 take slightly longer
-		return fmt.Errorf("[ResetUblox] reboot timed out error")
+		return fmt.Errorf("[ResetUblox] Reset timed out error")
 	}
 
 	return nil

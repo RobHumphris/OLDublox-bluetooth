@@ -1,6 +1,7 @@
 package ubloxbluetooth
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -70,10 +71,13 @@ func (ub *UbloxBluetooth) ResetUbloxSync() error {
 		return errors.Wrap(err, "[ResetUblox] error")
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+	defer cancel()
+
 	select {
 	case <-ub.rebootDetected:
 
-	case <-time.After(time.Second * 4):
+	case <-ctx.Done():
 		// Should take no more than a second for 750/751. 753/754 take slightly longer
 		return fmt.Errorf("[ResetUblox] Reset timed out error")
 	}

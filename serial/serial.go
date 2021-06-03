@@ -280,7 +280,7 @@ func (sp *SerialPort) Flush() error {
 	return nil
 }
 
-var defaultDTRPause = 100 * time.Millisecond
+var defaultDTRPause = 500 * time.Millisecond
 
 func (sp *SerialPort) setDTR() error {
 	err := sp.ioctl(unix.TIOCMBIS, unix.TIOCM_DTR)

@@ -77,8 +77,6 @@ type UbloxBluetooth struct {
 	connectedDevice    *ConnectionReply
 	disconnectHandler  DeviceEvent
 	disconnectCount    int
-	rebootExpected     bool
-	rebootDetected     chan bool
 	disconnectExpected bool
 	CommsStats         map[string]*SensorCommsStatitics
 }
@@ -203,8 +201,6 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration, onErro
 		cancel:             cancel,
 		connectedDevice:    nil,
 		disconnectCount:    0,
-		rebootExpected:     false,
-		rebootDetected:     make(chan bool, 1),
 		CommsStats:         make(map[string]*SensorCommsStatitics),
 	}
 	discoveryIndex++

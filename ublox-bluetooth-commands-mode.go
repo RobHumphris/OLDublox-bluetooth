@@ -83,6 +83,14 @@ func (ub *UbloxBluetooth) ResetUbloxSync() error {
 		}
 	}
 
+	err = ub.ATCommand()
+	if err != nil {
+		err = ub.ATCommand()
+		if err != nil {
+			return fmt.Errorf("[ResetUblox] not responding")
+		}
+	}
+
 	ub.SetSerialVerbose(false)
 	return nil
 }

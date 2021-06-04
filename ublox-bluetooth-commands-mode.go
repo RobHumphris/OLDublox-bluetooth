@@ -69,7 +69,6 @@ func (ub *UbloxBluetooth) ResetUbloxSync() error {
 	defer cancel()
 
 	finished := false
-	ub.SetSerialVerbose(true)
 	for !finished {
 		select {
 		case data := <-ub.DataChannel:
@@ -78,19 +77,16 @@ func (ub *UbloxBluetooth) ResetUbloxSync() error {
 			}
 		case <-ctx.Done():
 			// Should take no more than a second for 750/751. 753/754 take slightly longer
-			ub.SetSerialVerbose(false)
 			return fmt.Errorf("[ResetUblox] Reset timed out error")
 		}
 	}
 
+	// 1st one can fail
+	err = ub.ATCommand()
 	err = ub.ATCommand()
 	if err != nil {
-		err = ub.ATCommand()
-		if err != nil {
-			return fmt.Errorf("[ResetUblox] not responding")
-		}
+		return fmt.Errorf("[ResetUblox] not responding")
 	}
 
-	ub.SetSerialVerbose(false)
 	return nil
 }

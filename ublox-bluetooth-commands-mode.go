@@ -75,6 +75,10 @@ func (ub *UbloxBluetooth) ResetUbloxSync() error {
 			if string(data) == rebootResponseString {
 				finished = true
 			}
+		case <-ub.ctx.Done():
+			// System shutdown routine called
+			return fmt.Errorf("[ResetUblox] Shutdown")
+
 		case <-ctx.Done():
 			// Should take no more than a second for 750/751. 753/754 take slightly longer
 			return fmt.Errorf("[ResetUblox] Reset timed out error")

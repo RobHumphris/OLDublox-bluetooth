@@ -81,27 +81,32 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 	dataLines := bytes.Split(m, []byte(newline))
 	// data := removeNewlines(msg[2 : len(msg)-1])
 	for _, data := range dataLines {
-		switch msg[1] {
-		case StartEvent:
-			ub.StartEventReceived = true
-		case ATConfirmation:
-			switch data[0] {
-			case '+':
-				ub.DataChannel <- data
-			case '"':
-				ub.DataChannel <- data
-			default:
-				ub.handleGeneralMessage(data)
-			}
-		case ATEvent:
-			ub.DataChannel <- data
-
-			// we check for disconnect events disconnectResponse
-			if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
-				if ub.disconnectHandler != nil {
-					go ub.disconnectHandler(ub)
+		select {
+		case <-ub.ctx.Done():
+			return nil
+		default:
+			switch msg[1] {
+			case StartEvent:
+				ub.StartEventReceived = true
+			case ATConfirmation:
+				switch data[0] {
+				case '+':
+					ub.DataChannel <- data
+				case '"':
+					ub.DataChannel <- data
+				default:
+					ub.handleGeneralMessage(data)
 				}
-				return ErrUnexpectedDisconnect
+			case ATEvent:
+				ub.DataChannel <- data
+
+				// we check for disconnect events disconnectResponse
+				if bytes.HasPrefix(data, disconnectResponse) && !ub.disconnectExpected {
+					if ub.disconnectHandler != nil {
+						go ub.disconnectHandler(ub)
+					}
+					return ErrUnexpectedDisconnect
+				}
 			}
 		}
 	}

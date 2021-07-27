@@ -128,8 +128,8 @@ type DiscoveryReplyCallback func(*DiscoveryReply, int32) error
 func (ub *UbloxBluetooth) handleDiscovery(expResp string, drChan chan *DiscoveryReply) error {
 	return ub.HandleDiscovery(expResp, func(d []byte) (bool, error) {
 		dr, err := ProcessDiscoveryReply(d)
-		dr.DongleIndex = ub.GetDeviceIndex()
 		if err == nil {
+			dr.DongleIndex = ub.GetDeviceIndex()
 			drChan <- dr
 		} else if err != ErrorUnexpectedResponse {
 			return false, err

@@ -9,6 +9,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/8power/gateway-application/global"
 	"golang.org/x/sys/unix"
 )
 
@@ -163,13 +164,12 @@ func (sp *SerialPort) Write(b []byte) error {
 	return err
 }
 
-func (sp *SerialPort) read(readChan chan byte) error {
+func (sp *SerialPort) read(readChan chan byte, e chan error) {
 	var err error
 	buff := make([]byte, 1)
 	for sp.contineScanning {
 		n, err := syscall.Read(sp.fd, buff)
 		if err != nil {
-			sp.contineScanning = false
 			break
 		}
 		if n > 0 {
@@ -177,7 +177,7 @@ func (sp *SerialPort) read(readChan chan byte) error {
 			readChan <- buff[0]
 		}
 	}
-	return err
+	e <- err
 }
 
 // StopScanning sets the continueScanning flag to false
@@ -187,7 +187,7 @@ func (sp *SerialPort) StopScanning() {
 
 // ScanPort reads a complete line from the serial port and sends the bytes
 // to the passed channel
-func (sp *SerialPort) ScanPort(ctx context.Context, dataHandler func([]byte), edmHandler func([]byte), errHandler func(error)) error {
+func (sp *SerialPort) ScanPort(ctx context.Context, errChan chan error, dataHandler func([]byte), edmHandler func([]byte), errHandler func(error)) {
 	var err error
 	fmt.Println("[ScanPort] starting")
 	defer fmt.Println("[ScanPort] exiting")
@@ -199,13 +199,17 @@ func (sp *SerialPort) ScanPort(ctx context.Context, dataHandler func([]byte), ed
 	sp.contineScanning = true
 
 	rchan := make(chan byte, 1)
-	go sp.read(rchan)
+	echan := make(chan error, 1)
+	go sp.read(rchan, echan)
 
 	for sp.contineScanning {
 		select {
+		case err = <-echan:
+			sp.StopScanning()
 		case <-ctx.Done():
-			fmt.Printf("[ScanPort] context done")
-			return err
+			fmt.Printf("[ScanPort] Shutting down")
+			err = global.ShutdownError
+			sp.StopScanning()
 		case b := <-rchan:
 			if sp.extendedDataMode {
 				if !edmStartReceived {
@@ -248,7 +252,7 @@ func (sp *SerialPort) ScanPort(ctx context.Context, dataHandler func([]byte), ed
 
 		}
 	}
-	return err
+	errChan <- err
 }
 
 // Ioctl sends

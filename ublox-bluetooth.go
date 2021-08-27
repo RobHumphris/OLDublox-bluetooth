@@ -225,7 +225,8 @@ func (ub *UbloxBluetooth) serialportReader() {
 		}
 	}()
 
-	go ub.serialPort.ScanPort(ub.ctx,
+	echan := make(chan error, 1)
+	go ub.serialPort.ScanPort(ub.ctx, echan,
 		func(r []byte) {
 			b := bytes.Trim(r, newline)
 			if len(b) != 0 {
@@ -249,6 +250,9 @@ func (ub *UbloxBluetooth) serialportReader() {
 
 	for {
 		select {
+		case err := <-echan:
+			ub.errorHandler(err)
+			return
 		case <-ub.ctx.Done():
 			ub.serialPort.StopScanning()
 			return
@@ -317,7 +321,12 @@ func (ub *UbloxBluetooth) Write(data string) error {
 	} else {
 		b = []byte(append([]byte(data), tail...))
 	}
-	return ub.WriteBytes(b)
+	err := ub.WriteBytes(b)
+
+	if err != nil {
+		ub.errorHandler(err)
+	}
+	return err
 }
 
 // WriteBytes writes the passed bytes

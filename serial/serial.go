@@ -204,11 +204,11 @@ func (sp *SerialPort) ScanPort(ctx context.Context, errChan chan error, dataHand
 
 	for sp.contineScanning {
 		select {
+		case err = <-echan:
+			sp.StopScanning()
 		case <-ctx.Done():
 			fmt.Printf("[ScanPort] Shutting down")
 			err = global.ShutdownError
-			sp.StopScanning()
-		case err = <-echan:
 			sp.StopScanning()
 		case b := <-rchan:
 			if sp.extendedDataMode {

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/8power/gateway-application/global"
 	"github.com/8power/ublox-bluetooth/serial"
 	"github.com/pkg/errors"
 )
@@ -251,14 +250,12 @@ func (ub *UbloxBluetooth) serialportReader() {
 
 	for {
 		select {
+		case err := <-echan:
+			ub.errorHandler(err)
+			return
 		case <-ub.ctx.Done():
 			ub.serialPort.StopScanning()
 			return
-		case err := <-echan:
-			switch err {
-			case global.ShutdownError:
-			default:
-			}
 		}
 	}
 }

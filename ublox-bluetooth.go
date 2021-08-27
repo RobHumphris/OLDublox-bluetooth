@@ -251,10 +251,7 @@ func (ub *UbloxBluetooth) serialportReader() {
 	for {
 		select {
 		case err := <-echan:
-			go func() {
-				// Check for catastophic failure
-				ub.errorHandler(err)
-			}()
+			ub.errorHandler(err)
 			return
 		case <-ub.ctx.Done():
 			ub.serialPort.StopScanning()
@@ -327,10 +324,7 @@ func (ub *UbloxBluetooth) Write(data string) error {
 	err := ub.WriteBytes(b)
 
 	if err != nil {
-		go func() {
-			// Check for catastophic failure
-			ub.errorHandler(err)
-		}()
+		ub.errorHandler(err)
 	}
 	return err
 }

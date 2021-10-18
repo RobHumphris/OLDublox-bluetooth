@@ -396,5 +396,9 @@ func (ub *UbloxBluetooth) downloadData(command []byte, commandParameters string,
 		}
 		return errors.Wrap(err, "[downloadData] processEventsReply error")
 	}
+
+	if len(t) < (lengthOffset - 5) {
+		return errors.Wrap(fmt.Errorf("response truncated/corrupt"), "[downloadData] processEventsReply error")
+	}
 	return ub.HandleDataDownload(stringToInt(t[lengthOffset-4:]), reply, dnh, dih)
 }

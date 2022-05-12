@@ -198,6 +198,21 @@ func (ub *UbloxBluetooth) ConnectToDevice(address string, onConnect DeviceEvent,
 	var d []byte
 	var cr *ConnectionReply
 
+	_, err = ub.writeAndWait(SetConnectionTimeoutCommand(), false)
+	if err != nil {
+		return err
+	}
+
+	_, err = ub.writeAndWait(SetMinConnectionIntervalCommand(), false)
+	if err != nil {
+		return err
+	}
+
+	_, err = ub.writeAndWait(SetMaxConnectionIntervalCommand(), false)
+	if err != nil {
+		return err
+	}
+
 	d, err = ub.writeAndWait(ConnectCommand(address), true)
 	if err != nil {
 		return err

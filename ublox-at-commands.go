@@ -267,3 +267,24 @@ func GetLocalName() CmdResp {
 		Resp: getLocalNameRespString,
 	}
 }
+
+func SetConnectionTimeoutCommand() CmdResp {
+	return CmdResp{
+		Cmd:  "AT+UBTLECFG=8,10000",
+		Resp: empty,
+	}
+}
+
+func SetMinConnectionIntervalCommand() CmdResp {
+	return CmdResp{
+		Cmd:  "AT+UBTLECFG=4,6",
+		Resp: empty,
+	}
+}
+
+func SetMaxConnectionIntervalCommand() CmdResp {
+	return CmdResp{
+		Cmd:  "AT+UBTLECFG=5,6",
+		Resp: empty,
+	}
+}

@@ -68,7 +68,7 @@ type UbloxBluetooth struct {
 	dongleSerialNumber string // This is the dongle native serial number
 	serialNumber       string // This is the "LocalName" which is programmed to be the 8power 16 digit serial number in production
 	currentMode        ubloxMode
-	StartEventReceived bool
+	StartEventReceived chan struct{}
 	DataChannel        chan []byte
 	CompletedChannel   chan bool
 	errorHandler       func(error)
@@ -193,7 +193,7 @@ func newUbloxBluetooth(serialID *serial.BtdSerial, timeout time.Duration, onErro
 		serialPort:         sp,
 		dongleSerialNumber: "",
 		currentMode:        extendedDataMode,
-		StartEventReceived: false,
+		StartEventReceived: make(chan struct{}, 1),
 		DataChannel:        make(chan []byte, 1),
 		CompletedChannel:   make(chan bool, 1),
 		errorHandler:       onError,
@@ -299,6 +299,7 @@ func (ub *UbloxBluetooth) Close() {
 
 	close(ub.DataChannel)
 	close(ub.CompletedChannel)
+	close(ub.StartEventReceived)
 }
 
 // SetCommsRate sets the rate to either: Default BaudRate, or HighSpeed

@@ -72,7 +72,6 @@ func (ub *UbloxBluetooth) ResetUbloxSync() error {
 	for !finished {
 		select {
 		case data := <-ub.DataChannel:
-			fmt.Printf("<-%v,%v\n\r", data, []byte(data))
 			if string(data) == rebootResponseString {
 				finished = true
 			}

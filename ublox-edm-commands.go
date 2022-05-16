@@ -87,7 +87,9 @@ func (ub *UbloxBluetooth) ParseEDMMessage(msg []byte) error {
 		default:
 			switch msg[1] {
 			case StartEvent:
-				ub.StartEventReceived <- struct{}{}
+				if ub.resetPending {
+					ub.startEventReceived <- struct{}{}
+				}
 			case ATConfirmation:
 				switch data[0] {
 				case '+':

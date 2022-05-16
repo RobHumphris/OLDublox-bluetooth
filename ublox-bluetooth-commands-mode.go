@@ -58,8 +58,13 @@ func (ub *UbloxBluetooth) ResetUblox() error {
 }
 
 // ResetUbloxSync calls the Serial port's ResetViaDTR and does not return until
-// the ublox module has indicated it is ready, i.e.  "+STARTUP" received.
+// the ublox module has indicated it is ready, i.e.  Start Event received.
 func (ub *UbloxBluetooth) ResetUbloxSync() error {
+	defer func() {
+		ub.resetPending = false
+	}()
+
+	ub.resetPending = true
 	err := ub.serialPort.ResetViaDTR()
 	if err != nil {
 		return errors.Wrap(err, "[ResetUblox] error")
@@ -71,10 +76,9 @@ func (ub *UbloxBluetooth) ResetUbloxSync() error {
 	finished := false
 	for !finished {
 		select {
-		case data := <-ub.DataChannel:
-			if string(data) == rebootResponseString {
-				finished = true
-			}
+		case <-ub.startEventReceived:
+			finished = true
+
 		case <-ub.ctx.Done():
 			// System shutdown routine called
 			return fmt.Errorf("[ResetUblox] Shutdown")

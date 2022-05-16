@@ -11,7 +11,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/executables/configure/main.go",
             "env": {
-                "DEVICE_MAC":"EAA4997A81C4r"
+                "DEVICE_MAC":"D3E76F78836Er"
             },
             "args": [""]
         },
@@ -22,7 +22,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/executables/configure/main.go",
             "env": {
-                "DEVICE_MAC":"EAA4997A81C4r"
+                "DEVICE_MAC":"D3E76F78836Er"
             },
             "args": ["-reset"]
         },
@@ -33,7 +33,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/executables/discover/main.go",
             "env": {
-                "DEVICE_MAC":"EAA4997A81C4r"
+                "DEVICE_MAC":"D3E76F78836Er"
             },
             "args": []
         }

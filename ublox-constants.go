@@ -19,7 +19,7 @@ const getLocalName = "+UBTLN?"
 const getLocalNameRespString = "+UBTLN:"
 
 const powerOff = "+CPWROFF"
-const rebootResponseString = "+STARTUP"
+const rebootResponseString = "\xaa\x00\x02\x00qU"
 
 var rebootResponse = []byte(rebootResponseString)
 

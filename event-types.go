@@ -9,14 +9,28 @@ import (
 // VEH Sensor event types
 const (
 	VehEventBoot         = 0x00
-	VehEventSensor       = 0x02
-	VehEventMessage      = 0x0D
+	VehEventSystemOff    = 0x01
+	VehEventTimeAdjust   = 0x02
+	VehEventLogCleared   = 0x05
+	VehEventMessage      = 0x06
+	VehEventEventLog     = 0x0A // Not used
+	VehEventDiectory     = 0x0B // Can be ignored
+	VehEventWatchdog     = 0x0C
+	VehEventAppErr       = 0x0D
+	VehEventAssert       = 0x0E
+	VehEventHardFault    = 0x0F
+	VehEventEfmStatus    = 0x10
 	VehEventDummy        = 0x16
 	VehEventTemperature  = 0x64
 	VehEventVibration    = 0x65
+	VehEventMicrophone   = 0x66
+	VehEventHallEffect   = 0x67
 	VehEventConnected    = 0xC0
 	VehEventDisconnected = 0xD0
-	VehEventSystemOff    = 0x00
+	VehEventAlert        = 0x0E
+	VehEventUnused       = 0xFC
+	VehEventBad          = 0xFD
+	VehEventDataLoss     = 0xFE
 	VehEventError        = 0xFF
 )
 
@@ -59,7 +73,7 @@ var (
 	ehPayloadOffset   field = field{10, variableSize}
 
 	/*
-		VEH_EVT_BOOT
+		VEH_EVT_BOOT 0x00
 		Offset		Parameter		Type			Description
 		10			reason			uint32_t		CPU reset register contents
 		14			version			uint8[4]		Version
@@ -70,19 +84,101 @@ var (
 	ebFlagOffset    field = field{18, sizeofUint8}
 
 	/*
-		VEH_EVT_SENSOR - No documentation exists for this!
+		VEH_EVT_SYSTEM_OFF 0x01
 		Offset		Parameter		Type			Description
-		10			temperature		uint16_t		Temperature reading
-		12			battery			uint16_t		Battery reading in mV
-		14			other			uint8[length-14]?
-		?			flag			uint8_t			0 = no data
+		10			flag			uint8_t			0 = no data
 	*/
-	esTemperatureOffset field = field{10, sizeofUint16}
-	esBatteryOffset     field = field{12, sizeofUint16}
-	esOtherOffset       field = field{14, variableSize}
+	esoFlagOffset field = field{10, sizeofUint8}
 
 	/*
-		VEH_EVT_APP_TEMPERATURE
+		VEH_EVT_TIME_ADJUST 0x02
+		Offset		Parameter		Type			Description
+		10			current			uint32_t		Current time value
+		14			updated			uint32_t		Updated time value
+		18			flag			uint8_t			0 = no data
+	*/
+	etaCurrentOffset field = field{10, sizeofUint32}
+	etaUpdatedOffset field = field{14, sizeofUint32}
+	etaFlagOffset    field = field{18, sizeofUint8}
+
+	/*
+		VEH_EVT_LOG_CLEARED 0x05
+		Offset		Parameter		Type			Description
+		10			flag			uint8_t			0 = no data
+	*/
+	elcFlagOffset field = field{10, sizeofUint8}
+
+	/*
+		VEH_EVT_MESSAGE 0x06
+		Offset		Parameter		Type			Description
+		10			message			uint8_t[]		Message writtn to event log
+		10+length	flag			uint8_t			0 = no data
+	*/
+	emMessageOffset field = field{10, variableSize}
+
+	/*
+		VEH_EVT_WATCHDOG 0x0C
+		Offset		Parameter		Type			Description
+		10			r0				uint32_t		R0 register
+		14			r1				uint32_t		R1 register
+		18			r2				uint32_t		R2 register
+		22			r3				uint32_t		R3 register
+		26			r12				uint32_t		R12 register
+		30			lr				uint32_t		Link register
+		34			pc				uint32_t		Program counter
+		38			psr				uint32_t		Pragram Status register
+	*/
+	ewdR0Offset  field = field{10, sizeofUint32}
+	ewdR1Offset  field = field{14, sizeofUint32}
+	ewdR2Offset  field = field{18, sizeofUint32}
+	ewdR3Offset  field = field{22, sizeofUint32}
+	ewdR12Offset field = field{26, sizeofUint32}
+	ewdLROffset  field = field{30, sizeofUint32}
+	ewdPCOffset  field = field{34, sizeofUint32}
+	ewdPSROffset field = field{38, sizeofUint32}
+
+	/*
+		VEH_EVT_APP_ERR 0x0D
+		Offset		Parameter		Type			Description
+		10			line_num		uint16_t		the line number where the error occurred
+		12			file_name		uint8_t[]		the file name in which the error occurred
+		12+length	err_code		uint32_t		Error code
+	*/
+	eaeLineNoOffset   field = field{10, sizeofUint16}
+	eaeFileNameOffset field = field{12, variableSize}
+
+	/*
+		VEH_EVT_ASSERT 0x0E
+		Offset		Parameter		Type			Description
+		10			line_num		uint16_t		the line number where the assert occurred
+		12			file_name		uint8_t[]		the file name in which the assert occurred
+	*/
+	easLineNoOffset   field = field{10, sizeofUint16}
+	easFileNameOffset field = field{12, variableSize}
+
+	/*
+		VEH_EVT_HARDFAULT 0x0F
+		Offset		Parameter		Type			Description
+		10			r0				uint32_t		R0 register
+		14			r1				uint32_t		R1 register
+		18			r2				uint32_t		R2 register
+		22			r3				uint32_t		R3 register
+		26			r12				uint32_t		R12 register
+		30			lr				uint32_t		Link register
+		34			pc				uint32_t		Program counter
+		38			psr				uint32_t		Pragram Status register
+	*/
+	ehfR0Offset  field = field{10, sizeofUint32}
+	ehfR1Offset  field = field{14, sizeofUint32}
+	ehfR2Offset  field = field{18, sizeofUint32}
+	ehfR3Offset  field = field{22, sizeofUint32}
+	ehfR12Offset field = field{26, sizeofUint32}
+	ehfLROffset  field = field{30, sizeofUint32}
+	ehfPCOffset  field = field{34, sizeofUint32}
+	ehfPSROffset field = field{38, sizeofUint32}
+
+	/*
+		VEH_EVT_APP_TEMPERATURE 0x64
 		Offset		Parameter		Type			Description
 		10			battery			float32_t		Battery voltage (Volts)
 		14			temperature		float32_t		Current temperature (C)
@@ -97,7 +193,7 @@ var (
 	etFlagOffset        field = field{26, sizeofUint8}
 
 	/*
-		VEH_EVT_APP_VIBRATION
+		VEH_EVT_APP_VIBRATION 0x65
 		Offset		Parameter		Type			Description
 		10			battery			float32_t		Battery voltage (Volts)
 		14			temperature		float32_t		Current temperature (C)
@@ -114,6 +210,45 @@ var (
 	evOtherOffset       field = field{26, sizeofFloat32}
 	evFlagsOffset       field = field{30, sizeofFloat32}
 	evFlagOffset        field = field{34, sizeofUint8}
+
+	/*
+		VEH_EVT_APP_MICROPHONE 0x66
+		Offset		Parameter		Type			Description
+		10			battery			float32_t		Battery voltage (Volts)
+		14			temperature		float32_t		Current temperature (C)
+		18			odr				float32_t		Output data rate
+		22			flag			uint8_t			0 = no data
+	*/
+	emBatteryOffset     field = field{10, sizeofFloat32}
+	emTemperatureOffset field = field{14, sizeofFloat32}
+	emOdrOffset         field = field{18, sizeofFloat32}
+	emFlagOffset        field = field{22, sizeofUint8}
+
+	/*
+		VEH_EVT_APP_HALL 0x67
+		Offset		Parameter		Type			Description
+		10			battery			float32_t		Battery voltage (Volts)
+		14			temperature		float32_t		Current temperature (C)
+		18			odr				float32_t		Output data rate
+		22			hysteresis		float32_t		0 = no hysteresis
+		26			range			float32_t		Range in tesla
+		30			fir_filter		uint16_t		Finite Impulse response filter burst size
+		32			flag			uint8_t			0 = no data
+	*/
+	ehBatteryOffset     field = field{10, sizeofFloat32}
+	ehTemperatureOffset field = field{14, sizeofFloat32}
+	ehOdrOffset         field = field{18, sizeofFloat32}
+	ehHysteresisOffset  field = field{22, sizeofFloat32}
+	ehRangeOffset       field = field{26, sizeofUint16}
+	ehFirFilterOffset   field = field{30, sizeofUint16}
+	ehFlagOffset        field = field{32, sizeofUint8}
+
+	/*
+		VEH_EVT_ERROR 0x05
+		Offset		Parameter		Type			Description
+		10			flag			uint8_t			0 = no data
+	*/
+	eerFlagOffset field = field{10, sizeofUint8}
 )
 
 type handler func([]byte) *VehEvent
@@ -128,11 +263,18 @@ type VehEvent struct {
 	Timestamp         uint32
 	EventType         int
 	BootEvent         *VehBootEvent
-	SensorEvent       *VehSensorEvent
-	ConnectedEvent    *VehConnectedEvent
-	DisconnectedEvent *VehDisconnectedEvent
+	TimeAdjustEvent   *VehTimeAdjustEvent
+	MessageEvent      *VehMessageEvent
+	WatchDogEvent     *VehWatchDogEvent
+	AppErrEvent       *VehAppErrEvent
+	AssertEvent       *VehAssertEvent
+	HardFaultEvent    *VehHardFaultEvent
 	TemperatureEvent  *VehTemperatureEvent
 	VibrationEvent    *VehVibrationEvent
+	MicrophoneEvent   *VehMicrophoneEvent
+	HallEvent         *VehHallEvent
+	ConnectedEvent    *VehConnectedEvent
+	DisconnectedEvent *VehDisconnectedEvent
 }
 
 // VehBootEvent structure
@@ -143,11 +285,46 @@ type VehBootEvent struct {
 	BuildNumber     uint32
 }
 
-// VehSensorEvent structure
-type VehSensorEvent struct {
-	Temperature       float32
-	BatteryMilliVolts float32
-	Other             []byte
+type VehTimeAdjustEvent struct {
+	Current uint32
+	Updated uint32
+}
+
+type VehMessageEvent struct {
+	Message string
+}
+
+type VehWatchDogEvent struct {
+	R0  uint32
+	R1  uint32
+	R2  uint32
+	R3  uint32
+	R12 uint32
+	LR  uint32
+	PC  uint32
+	PSR uint32
+}
+
+type VehAppErrEvent struct {
+	LineNo    uint32
+	Filename  string
+	ErrorCode uint32
+}
+
+type VehAssertEvent struct {
+	LineNo   uint32
+	Filename string
+}
+
+type VehHardFaultEvent struct {
+	R0  uint32
+	R1  uint32
+	R2  uint32
+	R3  uint32
+	R12 uint32
+	LR  uint32
+	PC  uint32
+	PSR uint32
 }
 
 // VehConnectedEvent structure
@@ -176,18 +353,38 @@ type VehVibrationEvent struct {
 	Gain        float32
 }
 
+type VehMicrophoneEvent struct {
+	Battery     float32
+	Temperature float32
+	Odr         float32
+}
+
+type VehHallEvent struct {
+	Battery     float32
+	Temperature float32
+	Odr         float32
+	Hysteresis  float32
+	Range       float32
+	FirFilter   uint16
+}
+
 func init() {
 	handlers = make(handlersMap)
 	handlers[VehEventBoot] = newBootEvent
-	handlers[VehEventSensor] = newSensorEvent
-	// VehEventMessage
-	// VehEventDummy
+	handlers[VehEventSystemOff] = newGenericEvent
+	handlers[VehEventTimeAdjust] = newTimeAdjustEvent
+	handlers[VehEventLogCleared] = newGenericEvent
+	handlers[VehEventMessage] = newMessageEvent
+	handlers[VehEventWatchdog] = newWatchDogEvent
+	handlers[VehEventAppErr] = newAppErrEvent
+	handlers[VehEventAssert] = newAssertEvent
 	handlers[VehEventTemperature] = newTemperatureEvent
 	handlers[VehEventVibration] = newVibrationEvent
+	handlers[VehEventMicrophone] = newMicrophoneEvent
+	handlers[VehEventHallEffect] = newHallEvent
 	handlers[VehEventConnected] = newConnectedEvent
 	handlers[VehEventDisconnected] = newDisconnectedEvent
-	// VehEventSystemOff
-	handlers[VehEventError] = newErrorEvent
+	handlers[VehEventError] = newGenericEvent
 }
 
 // NewRecorderEvent returns new RecorderEvent
@@ -203,7 +400,7 @@ func NewRecorderEvent(b []byte) (*VehEvent, error) {
 	return nil, fmt.Errorf("Unhandled Event type: %02X", b[ehEventTypeOffset.Start()])
 }
 
-func newErrorEvent(b []byte) *VehEvent {
+func newGenericEvent(b []byte) *VehEvent {
 	eb, _ := newVehEvent(b)
 	return &eb
 }
@@ -229,29 +426,68 @@ func newBootEvent(b []byte) *VehEvent {
 	return &eb
 }
 
-func newSensorEvent(b []byte) *VehEvent {
-	eb, l := newVehEvent(b)
-	eb.SensorEvent = &VehSensorEvent{
-		float32(binary.LittleEndian.Uint16(b[esTemperatureOffset.Start():esTemperatureOffset.End()]) / 4),
-		float32(binary.LittleEndian.Uint16(b[esBatteryOffset.Start():esBatteryOffset.End()]) / 1000),
-		make([]byte, l-14),
-	}
-	copy(eb.SensorEvent.Other, b[esOtherOffset.Start()-1:l-1])
-	return &eb
-}
-
-func newConnectedEvent(b []byte) *VehEvent {
-	eb, l := newVehEvent(b)
-	eb.ConnectedEvent = &VehConnectedEvent{
-		macString(b, l),
+func newTimeAdjustEvent(b []byte) *VehEvent {
+	eb, _ := newVehEvent(b)
+	eb.TimeAdjustEvent = &VehTimeAdjustEvent{
+		Current: binary.LittleEndian.Uint32(b[etaCurrentOffset.Start():etaCurrentOffset.End()]),
+		Updated: binary.LittleEndian.Uint32(b[etaUpdatedOffset.Start():etaUpdatedOffset.End()]),
 	}
 	return &eb
 }
 
-func newDisconnectedEvent(b []byte) *VehEvent {
+func newMessageEvent(b []byte) *VehEvent {
 	eb, l := newVehEvent(b)
-	eb.DisconnectedEvent = &VehDisconnectedEvent{
-		macString(b, l),
+	eb.MessageEvent = &VehMessageEvent{
+		Message: string(b[emMessageOffset.Start() : emMessageOffset.Start()+l]),
+	}
+	return &eb
+}
+
+func newWatchDogEvent(b []byte) *VehEvent {
+	eb, _ := newVehEvent(b)
+	eb.WatchDogEvent = &VehWatchDogEvent{
+		R0:  binary.LittleEndian.Uint32(b[ewdR0Offset.Start():ewdR0Offset.End()]),
+		R1:  binary.LittleEndian.Uint32(b[ewdR1Offset.Start():ewdR1Offset.End()]),
+		R2:  binary.LittleEndian.Uint32(b[ewdR2Offset.Start():ewdR2Offset.End()]),
+		R3:  binary.LittleEndian.Uint32(b[ewdR3Offset.Start():ewdR3Offset.End()]),
+		R12: binary.LittleEndian.Uint32(b[ewdR12Offset.Start():ewdR12Offset.End()]),
+		LR:  binary.LittleEndian.Uint32(b[ewdLROffset.Start():ewdLROffset.End()]),
+		PC:  binary.LittleEndian.Uint32(b[ewdPCOffset.Start():ewdPCOffset.End()]),
+		PSR: binary.LittleEndian.Uint32(b[ewdPSROffset.Start():ewdPSROffset.End()]),
+	}
+	return &eb
+}
+
+func newAppErrEvent(b []byte) *VehEvent {
+	eb, l := newVehEvent(b)
+	eb.AppErrEvent = &VehAppErrEvent{
+		LineNo:    binary.LittleEndian.Uint32(b[eaeLineNoOffset.Start():eaeLineNoOffset.End()]),
+		Filename:  string(b[eaeFileNameOffset.Start() : eaeFileNameOffset.Start()+l-sizeofUint32]),
+		ErrorCode: binary.LittleEndian.Uint32(b[eaeFileNameOffset.Start()+l-sizeofUint32 : eaeFileNameOffset.Start()+l]),
+	}
+	return &eb
+}
+
+func newAssertEvent(b []byte) *VehEvent {
+	eb, l := newVehEvent(b)
+	eb.AssertEvent = &VehAssertEvent{
+		LineNo:   binary.LittleEndian.Uint32(b[easLineNoOffset.Start():easLineNoOffset.End()]),
+		Filename: string(b[easFileNameOffset.Start() : easFileNameOffset.Start()+l]),
+	}
+	return &eb
+}
+
+func newHardFaultEvent(b []byte) *VehEvent {
+	eb, _ := newVehEvent(b)
+	eb.HardFaultEvent = &VehHardFaultEvent{
+		R0:  binary.LittleEndian.Uint32(b[ehfR0Offset.Start():ehfR0Offset.End()]),
+		R1:  binary.LittleEndian.Uint32(b[ehfR1Offset.Start():ehfR1Offset.End()]),
+		R2:  binary.LittleEndian.Uint32(b[ehfR2Offset.Start():ehfR2Offset.End()]),
+		R3:  binary.LittleEndian.Uint32(b[ehfR3Offset.Start():ehfR3Offset.End()]),
+		R12: binary.LittleEndian.Uint32(b[ehfR12Offset.Start():ehfR12Offset.End()]),
+		LR:  binary.LittleEndian.Uint32(b[ehfLROffset.Start():ehfLROffset.End()]),
+		PC:  binary.LittleEndian.Uint32(b[ehfPCOffset.Start():ehfPCOffset.End()]),
+		PSR: binary.LittleEndian.Uint32(b[ehfPSROffset.Start():ehfPSROffset.End()]),
 	}
 	return &eb
 }
@@ -274,6 +510,45 @@ func newVibrationEvent(b []byte) *VehEvent {
 		Temperature: float32FromBytes(b[evTemperatureOffset.Start():evTemperatureOffset.End()]),
 		Odr:         float32FromBytes(b[evOdrOffset.Start():evOdrOffset.End()]),
 		Gain:        float32FromBytes(b[evGainOffset.Start():evGainOffset.End()]),
+	}
+	return &eb
+}
+
+func newMicrophoneEvent(b []byte) *VehEvent {
+	eb, _ := newVehEvent(b)
+	eb.MicrophoneEvent = &VehMicrophoneEvent{
+		Battery:     float32FromBytes(b[emBatteryOffset.Start():emBatteryOffset.End()]),
+		Temperature: float32FromBytes(b[emTemperatureOffset.Start():emTemperatureOffset.End()]),
+		Odr:         float32FromBytes(b[emOdrOffset.Start():emOdrOffset.End()]),
+	}
+	return &eb
+}
+
+func newHallEvent(b []byte) *VehEvent {
+	eb, _ := newVehEvent(b)
+	eb.HallEvent = &VehHallEvent{
+		Battery:     float32FromBytes(b[ehBatteryOffset.Start():ehBatteryOffset.End()]),
+		Temperature: float32FromBytes(b[ehTemperatureOffset.Start():ehTemperatureOffset.End()]),
+		Odr:         float32FromBytes(b[ehOdrOffset.Start():ehOdrOffset.End()]),
+		Hysteresis:  float32FromBytes(b[ehHysteresisOffset.Start():ehHysteresisOffset.End()]),
+		Range:       float32FromBytes(b[ehRangeOffset.Start():ehRangeOffset.End()]),
+		FirFilter:   binary.LittleEndian.Uint16(b[ehFirFilterOffset.Start():ehFirFilterOffset.End()]),
+	}
+	return &eb
+}
+
+func newConnectedEvent(b []byte) *VehEvent {
+	eb, l := newVehEvent(b)
+	eb.ConnectedEvent = &VehConnectedEvent{
+		macString(b, l),
+	}
+	return &eb
+}
+
+func newDisconnectedEvent(b []byte) *VehEvent {
+	eb, l := newVehEvent(b)
+	eb.DisconnectedEvent = &VehDisconnectedEvent{
+		macString(b, l),
 	}
 	return &eb
 }

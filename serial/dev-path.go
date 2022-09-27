@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-var PathNotFound = fmt.Errorf("Port not found")
-var FormatError = fmt.Errorf("Format Error")
+var ErrPathNotFound = fmt.Errorf("port not found")
+var ErrFormatError = fmt.Errorf("format Error")
 
 type BtdSerial struct {
 	SerialPort string
@@ -56,7 +56,7 @@ func GetFTDIDevPaths() ([]*BtdSerial, error) {
 	}
 
 	if len(serialPorts) == 0 {
-		return nil, PathNotFound
+		return nil, ErrPathNotFound
 	}
 	return serialPorts, nil
 }

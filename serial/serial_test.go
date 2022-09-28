@@ -29,8 +29,8 @@ func TestSerial(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-
-	go sp.ScanPort(ctx,
+	ec := make(chan error, 1)
+	go sp.ScanPort(ctx, ec,
 		func(b []byte) {
 			fmt.Printf("r: %s\n", b)
 		}, func(b []byte) {
@@ -42,8 +42,8 @@ func TestSerial(t *testing.T) {
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
-				fmt.Println("Done")
+			case e := <-ec:
+				fmt.Printf("Done %v", e)
 				return
 			}
 		}

@@ -25,8 +25,6 @@ func mapEvent(e *VehEvent) {
 	switch e.EventType {
 	case VehEventBoot:
 		fmt.Printf("BootEvent %d\n", e.Sequence)
-	case VehEventSensor:
-		fmt.Printf("SensorEvent %d\n", e.Sequence)
 	case VehEventConnected:
 		fmt.Printf("ConnectedEvent %d\n", e.Sequence)
 	case VehEventDisconnected:

@@ -200,16 +200,14 @@ var (
 		18			odr				float32_t		Estimated sample rate freq (Hz)
 		22			gain			float32_t		Gain setting
 		26			bat%			float32_t		Battery charge as a percentage (100%)
-		30			flags			uint32_t		Spare
-		34			flag			uint8_t			0 = no data, 1 = data
+		30			flag			uint8_t			0 = no data, 1 = data
 	*/
 	evBatteryOffset     field = field{10, sizeofFloat32}
 	evTemperatureOffset field = field{14, sizeofFloat32}
 	evOdrOffset         field = field{18, sizeofFloat32}
 	evGainOffset        field = field{22, sizeofFloat32}
 	evBatteryPercOffset field = field{26, sizeofFloat32}
-	evFlagsOffset       field = field{30, sizeofFloat32}
-	evFlagOffset        field = field{34, sizeofUint8}
+	evFlagOffset        field = field{30, sizeofUint8}
 
 	/*
 		VEH_EVT_APP_MICROPHONE 0x66
@@ -217,14 +215,12 @@ var (
 		10			battery			float32_t		Battery voltage (Volts)
 		14			temperature		float32_t		Current temperature (C)
 		18			odr				float32_t		Output data rate
-		22			bat%			float32_t		Battery charge as a percentage (100%)
-		26			flag			uint8_t			0 = no data
+		22			flag			uint8_t			0 = no data
 	*/
 	emBatteryOffset     field = field{10, sizeofFloat32}
 	emTemperatureOffset field = field{14, sizeofFloat32}
 	emOdrOffset         field = field{18, sizeofFloat32}
-	emBatteryPercOffset field = field{22, sizeofFloat32}
-	emFlagOffset        field = field{26, sizeofUint8}
+	emFlagOffset        field = field{22, sizeofUint8}
 
 	/*
 		VEH_EVT_APP_HALL 0x67
@@ -235,17 +231,15 @@ var (
 		22			hysteresis		float32_t		0 = no hysteresis
 		26			range			float32_t		Range in tesla
 		30			fir_filter		uint16_t		Finite Impulse response filter burst size
-		32			bat%			float32_t		Battery charge as a percentage (100%)
-		36			flag			uint8_t			0 = no data
+		32			flag			uint8_t			0 = no data
 	*/
 	ehBatteryOffset     field = field{10, sizeofFloat32}
 	ehTemperatureOffset field = field{14, sizeofFloat32}
 	ehOdrOffset         field = field{18, sizeofFloat32}
 	ehHysteresisOffset  field = field{22, sizeofFloat32}
-	ehRangeOffset       field = field{26, sizeofUint16}
+	ehRangeOffset       field = field{26, sizeofFloat32}
 	ehFirFilterOffset   field = field{30, sizeofUint16}
-	ehBatteryPercOffset field = field{32, sizeofFloat32}
-	ehFlagOffset        field = field{36, sizeofUint8}
+	ehFlagOffset        field = field{32, sizeofUint8} // Currently too long, needs sorting
 
 	/*
 		VEH_EVT_ERROR 0x05
@@ -362,7 +356,6 @@ type VehMicrophoneEvent struct {
 	Battery     float32
 	Temperature float32
 	Odr         float32
-	BatPercent  float32
 }
 
 type VehHallEvent struct {
@@ -372,7 +365,6 @@ type VehHallEvent struct {
 	Hysteresis  float32
 	Range       float32
 	FirFilter   uint16
-	BatPercent  float32
 }
 
 func init() {
@@ -385,6 +377,7 @@ func init() {
 	handlers[VehEventWatchdog] = newWatchDogEvent
 	handlers[VehEventAppErr] = newAppErrEvent
 	handlers[VehEventAssert] = newAssertEvent
+	handlers[VehEventHardFault] = newHardFaultEvent
 	handlers[VehEventTemperature] = newTemperatureEvent
 	handlers[VehEventVibration] = newVibrationEvent
 	handlers[VehEventMicrophone] = newMicrophoneEvent
@@ -404,7 +397,7 @@ func NewRecorderEvent(b []byte) (*VehEvent, error) {
 	if ok {
 		return fn(b), nil
 	}
-	return nil, fmt.Errorf("Unhandled Event type: %02X", b[ehEventTypeOffset.Start()])
+	return nil, fmt.Errorf("unhandled Event type: %02X", b[ehEventTypeOffset.Start()])
 }
 
 func newGenericEvent(b []byte) *VehEvent {
@@ -511,13 +504,22 @@ func newTemperatureEvent(b []byte) *VehEvent {
 }
 
 func newVibrationEvent(b []byte) *VehEvent {
-	eb, _ := newVehEvent(b)
+	eb, l := newVehEvent(b)
 	eb.VibrationEvent = &VehVibrationEvent{
 		Battery:     float32FromBytes(b[evBatteryOffset.Start():evBatteryOffset.End()]),
 		Temperature: float32FromBytes(b[evTemperatureOffset.Start():evTemperatureOffset.End()]),
-		Odr:         float32FromBytes(b[evOdrOffset.Start():evOdrOffset.End()]),
-		Gain:        float32FromBytes(b[evGainOffset.Start():evGainOffset.End()]),
-		BatPercent:  float32FromBytes(b[evBatteryPercOffset.Start():evBatteryPercOffset.End()]),
+		Odr:         0.0,
+		Gain:        0.0,
+		BatPercent:  0.0,
+	}
+	if l >= evOdrOffset.End() {
+		eb.VibrationEvent.Odr = float32FromBytes(b[evOdrOffset.Start():evOdrOffset.End()])
+	}
+	if l >= evGainOffset.End() {
+		eb.VibrationEvent.Gain = float32FromBytes(b[evGainOffset.Start():evGainOffset.End()])
+	}
+	if l >= evBatteryPercOffset.End() {
+		eb.VibrationEvent.BatPercent = float32FromBytes(b[evBatteryPercOffset.Start():evBatteryPercOffset.End()])
 	}
 	return &eb
 }
@@ -528,7 +530,6 @@ func newMicrophoneEvent(b []byte) *VehEvent {
 		Battery:     float32FromBytes(b[emBatteryOffset.Start():emBatteryOffset.End()]),
 		Temperature: float32FromBytes(b[emTemperatureOffset.Start():emTemperatureOffset.End()]),
 		Odr:         float32FromBytes(b[emOdrOffset.Start():emOdrOffset.End()]),
-		BatPercent:  float32FromBytes(b[emBatteryPercOffset.Start():emBatteryPercOffset.End()]),
 	}
 	return &eb
 }
@@ -542,7 +543,6 @@ func newHallEvent(b []byte) *VehEvent {
 		Hysteresis:  float32FromBytes(b[ehHysteresisOffset.Start():ehHysteresisOffset.End()]),
 		Range:       float32FromBytes(b[ehRangeOffset.Start():ehRangeOffset.End()]),
 		FirFilter:   binary.LittleEndian.Uint16(b[ehFirFilterOffset.Start():ehFirFilterOffset.End()]),
-		BatPercent:  float32FromBytes(b[ehBatteryPercOffset.Start():ehBatteryPercOffset.End()]),
 	}
 	return &eb
 }

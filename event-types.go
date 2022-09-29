@@ -200,14 +200,18 @@ var (
 		18			odr				float32_t		Estimated sample rate freq (Hz)
 		22			gain			float32_t		Gain setting
 		26			bat%			float32_t		Battery charge as a percentage (100%)
-		30			flag			uint8_t			0 = no data, 1 = data
+		30			range			uint8_t			Accelerometer range
+		31			spare			uint8_t[3]		Unused
+		34			flag			uint8_t			0 = no data, 1 = data
 	*/
 	evBatteryOffset     field = field{10, sizeofFloat32}
 	evTemperatureOffset field = field{14, sizeofFloat32}
 	evOdrOffset         field = field{18, sizeofFloat32}
 	evGainOffset        field = field{22, sizeofFloat32}
 	evBatteryPercOffset field = field{26, sizeofFloat32}
-	evFlagOffset        field = field{30, sizeofUint8}
+	evRangeOffset       field = field{30, sizeofUint8}
+	evSpareOffset       field = field{31, sizeofUint8 * 3}
+	evFlagOffset        field = field{34, sizeofUint8}
 
 	/*
 		VEH_EVT_APP_MICROPHONE 0x66
@@ -354,6 +358,8 @@ type VehVibrationEvent struct {
 	Odr         float32
 	Gain        float32
 	BatPercent  float32
+	Range       uint8
+	Spare       [3]uint8
 }
 
 type VehMicrophoneEvent struct {
@@ -517,6 +523,8 @@ func newVibrationEvent(b []byte) *VehEvent {
 		Odr:         0.0,
 		Gain:        0.0,
 		BatPercent:  0.0,
+		Range:       0,
+		Spare:       [3]uint8{0, 0, 0},
 	}
 	if l >= evOdrOffset.End() {
 		eb.VibrationEvent.Odr = float32FromBytes(b[evOdrOffset.Start():evOdrOffset.End()])
@@ -526,6 +534,14 @@ func newVibrationEvent(b []byte) *VehEvent {
 	}
 	if l >= evBatteryPercOffset.End() {
 		eb.VibrationEvent.BatPercent = float32FromBytes(b[evBatteryPercOffset.Start():evBatteryPercOffset.End()])
+	}
+	if l >= evRangeOffset.End() {
+		eb.VibrationEvent.Range = uint8(b[evRangeOffset.Start()])
+	}
+	if l >= evSpareOffset.End() {
+		eb.VibrationEvent.Spare[0] = uint8(b[evSpareOffset.Start()])
+		eb.VibrationEvent.Spare[1] = uint8(b[evSpareOffset.Start()+1])
+		eb.VibrationEvent.Spare[2] = uint8(b[evSpareOffset.Start()+2])
 	}
 	return &eb
 }

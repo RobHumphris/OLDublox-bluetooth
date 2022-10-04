@@ -194,6 +194,7 @@ func (ub *UbloxBluetooth) discoveryCommandWithContext(ctx context.Context, scant
 		if err != nil {
 			// Need to cancel the scan by resetting the dongle
 			ub.serialPort.ResetViaDTR()
+			ub.serialPort.Flush()
 		}
 	}
 }

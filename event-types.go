@@ -141,17 +141,18 @@ var (
 		VEH_EVT_APP_ERR 0x0D
 		Offset		Parameter		Type			Description
 		10			line_num		uint16_t		the line number where the error occurred
-		12			file_name		uint8_t[]		the file name in which the error occurred
-		12+length	err_code		uint32_t		Error code
+		14			file_name		uint32_t		pointer to the file name in which the error occurred
+		18       	err_code		uint32_t		Error code
 	*/
-	eaeLineNoOffset   field = field{10, sizeofUint16}
-	eaeFileNameOffset field = field{12, variableSize}
+	eaeLineNoOffset    field = field{10, sizeofUint32}
+	eaeFileNameOffset  field = field{14, sizeofUint32}
+	eaeErrorCodeOffset field = field{18, sizeofUint32}
 
 	/*
 		VEH_EVT_ASSERT 0x0E
 		Offset		Parameter		Type			Description
 		10			line_num		uint16_t		the line number where the assert occurred
-		12			file_name		uint8_t[]		the file name in which the assert occurred
+		12			file_name		uint8_t[]		pointer to the file name in which the assert occurred
 	*/
 	easLineNoOffset   field = field{10, sizeofUint16}
 	easFileNameOffset field = field{12, variableSize}
@@ -312,14 +313,14 @@ type VehWatchDogEvent struct {
 }
 
 type VehAppErrEvent struct {
-	LineNo    uint32
-	Filename  string
-	ErrorCode uint32
+	LineNo      uint32
+	FilenamePtr uint32
+	ErrorCode   uint32
 }
 
 type VehAssertEvent struct {
-	LineNo   uint32
-	Filename string
+	LineNo      uint32
+	FilenamePtr uint32
 }
 
 type VehHardFaultEvent struct {
@@ -473,9 +474,20 @@ func newWatchDogEvent(b []byte) *VehEvent {
 func newAppErrEvent(b []byte) *VehEvent {
 	eb, l := newVehEvent(b)
 	eb.AppErrEvent = &VehAppErrEvent{
-		LineNo:    binary.LittleEndian.Uint32(b[eaeLineNoOffset.Start():eaeLineNoOffset.End()]),
-		Filename:  string(b[eaeFileNameOffset.Start() : eaeFileNameOffset.Start()+l-sizeofUint32]),
-		ErrorCode: binary.LittleEndian.Uint32(b[eaeFileNameOffset.Start()+l-sizeofUint32 : eaeFileNameOffset.Start()+l]),
+		LineNo:      0,
+		FilenamePtr: 0,
+		ErrorCode:   0,
+	}
+
+	// Protect ourselves from historically old events
+	if l >= eaeLineNoOffset.End() {
+		eb.AppErrEvent.LineNo = binary.LittleEndian.Uint32(b[eaeLineNoOffset.Start():eaeLineNoOffset.End()])
+	}
+	if l >= eaeFileNameOffset.End() {
+		eb.AppErrEvent.FilenamePtr = binary.LittleEndian.Uint32(b[eaeFileNameOffset.Start():eaeFileNameOffset.End()])
+	}
+	if l >= eaeErrorCodeOffset.End() {
+		eb.AppErrEvent.ErrorCode = binary.LittleEndian.Uint32(b[eaeErrorCodeOffset.Start():eaeErrorCodeOffset.End()])
 	}
 	return &eb
 }
@@ -483,8 +495,14 @@ func newAppErrEvent(b []byte) *VehEvent {
 func newAssertEvent(b []byte) *VehEvent {
 	eb, l := newVehEvent(b)
 	eb.AssertEvent = &VehAssertEvent{
-		LineNo:   binary.LittleEndian.Uint32(b[easLineNoOffset.Start():easLineNoOffset.End()]),
-		Filename: string(b[easFileNameOffset.Start() : easFileNameOffset.Start()+l]),
+		LineNo:      0,
+		FilenamePtr: 0,
+	}
+	if l >= easLineNoOffset.End() {
+		eb.AssertEvent.LineNo = binary.LittleEndian.Uint32(b[easLineNoOffset.Start():easLineNoOffset.End()])
+	}
+	if l >= easFileNameOffset.End() {
+		eb.AssertEvent.FilenamePtr = binary.LittleEndian.Uint32(b[easFileNameOffset.Start():easFileNameOffset.End()])
 	}
 	return &eb
 }

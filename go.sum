@@ -79,8 +79,8 @@ github.com/8power/veh-structs v0.0.0-20201007074549-43e3464385c3/go.mod h1:zWA+Z
 github.com/8power/veh-structs v0.0.0-20210203112043-2c8709388ecd/go.mod h1:eBUilUihlj6XGtjyTBYQNHrpnitF4F4xg1PACqZf428=
 github.com/8power/veh-structs v0.0.0-20210805091212-f3600a9214c3/go.mod h1:6ThPrYRJai/YiBIxj6h4J/1TCr03ekKVokKdsAZkNIc=
 github.com/8power/veh-structs v0.0.0-20210813125518-bb16728185e0/go.mod h1:6ThPrYRJai/YiBIxj6h4J/1TCr03ekKVokKdsAZkNIc=
-github.com/8power/veh-structs v1.0.8-0.20230309112831-5f1f66a45607 h1:yqXkUI0yguT1BT/KGito/VEoalDHZThw3Ws8kprkkD4=
-github.com/8power/veh-structs v1.0.8-0.20230309112831-5f1f66a45607/go.mod h1:7JU8ueahwHt/fM24xworDj2hL5ZkRLK7BMu+6VeTlpo=
+github.com/8power/veh-structs v1.0.8 h1:FKK62VQBihBlORIxiz4OsuCW8Hqp3XwAZheNsZci2rY=
+github.com/8power/veh-structs v1.0.8/go.mod h1:7JU8ueahwHt/fM24xworDj2hL5ZkRLK7BMu+6VeTlpo=
 github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
 github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=

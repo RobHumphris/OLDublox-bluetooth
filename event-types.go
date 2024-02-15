@@ -8,30 +8,33 @@ import (
 
 // VEH Sensor event types
 const (
-	VehEventBoot         = 0x00
-	VehEventSystemOff    = 0x01
-	VehEventTimeAdjust   = 0x02
-	VehEventLogCleared   = 0x05
-	VehEventMessage      = 0x06
-	VehEventEventLog     = 0x0A // Not used
-	VehEventDiectory     = 0x0B // Can be ignored
-	VehEventWatchdog     = 0x0C
-	VehEventAppErr       = 0x0D
-	VehEventAssert       = 0x0E
-	VehEventHardFault    = 0x0F
-	VehEventEfmStatus    = 0x10
-	VehEventDummy        = 0x16
-	VehEventTemperature  = 0x64
-	VehEventVibration    = 0x65
-	VehEventMicrophone   = 0x66
-	VehEventHallEffect   = 0x67
-	VehEventConnected    = 0xC0
-	VehEventDisconnected = 0xD0
-	VehEventAlert        = 0x0E
-	VehEventUnused       = 0xFC
-	VehEventBad          = 0xFD
-	VehEventDataLoss     = 0xFE
-	VehEventError        = 0xFF
+	VehEventBoot           = 0x00
+	VehEventSystemOff      = 0x01
+	VehEventTimeAdjust     = 0x02
+	VehEventLogCleared     = 0x05
+	VehEventMessage        = 0x06
+	VehEventEventLog       = 0x0A // Not used
+	VehEventDiectory       = 0x0B // Can be ignored
+	VehEventWatchdog       = 0x0C
+	VehEventAppErr         = 0x0D
+	VehEventAssert         = 0x0E
+	VehEventHardFault      = 0x0F
+	VehEventEfmStatus      = 0x10
+	VehEventDummy          = 0x16
+	VehEventTemperature    = 0x64
+	VehEventVibration      = 0x65
+	VehEventMicrophone     = 0x66
+	VehEventHallEffect     = 0x67
+	VehEventMagnetometer   = 0x68
+	VehEventAdpcmVibration = 0x69
+	VehEventActivityDetect = 0x6A
+	VehEventConnected      = 0xC0
+	VehEventDisconnected   = 0xD0
+	VehEventAlert          = 0x0E
+	VehEventUnused         = 0xFC
+	VehEventBad            = 0xFD
+	VehEventDataLoss       = 0xFE
+	VehEventError          = 0xFF
 )
 
 type field struct {
@@ -251,6 +254,63 @@ var (
 	ehFlagOffset        field = field{36, sizeofUint8} // Currently too long, needs sorting
 
 	/*
+		VEH_EVT_APP_MAGNETOMETER 0x68
+		Offset		Parameter		Type			Description
+		10			battery			float32_t		Battery voltage (Volts)
+		14			temperature		float32_t		Current temperature (C)
+		18			interval_s		float32_t		Interval in seconds between samples
+		22			battery%		float32_t		Battery gauge as a percentage
+		26			flag			uint8_t			0 = no data
+	*/
+	emgBatteryOffset     field = field{10, sizeofFloat32}
+	emgTemperatureOffset field = field{14, sizeofFloat32}
+	emgIntervalOffset    field = field{18, sizeofFloat32}
+	emgBatteryPercOffset field = field{22, sizeofFloat32}
+	emgFlagOffset        field = field{26, sizeofUint8}
+
+	/*
+		VEH_EVT_APP_ADPCM_VIBRATION 0x69
+		Offset		Parameter		Type			Description
+		10			battery			float32_t		Battery voltage (Volts)
+		14			temperature		float32_t		Current temperature (C)
+		18			odr				float32_t		Output data rate
+		22			gain			float32_t		Gain setting
+		26			battery%		float32_t		Battery gauge as a percentage
+		30			range			uint8_t			Accelerometer range
+		31          humidity        unit8_t         Humidity percentage
+		32			encoding format	uint8_t			Enc fmt
+		33			spare			uint8_t			spare
+		34			flag			uint8_t			0 = no data
+	*/
+	eavBatteryOffset     field = field{10, sizeofFloat32}
+	eavTemperatureOffset field = field{14, sizeofFloat32}
+	eavOdrOffset         field = field{18, sizeofFloat32}
+	eavGainOffset        field = field{22, sizeofFloat32}
+	eavBatteryPercOffset field = field{26, sizeofFloat32}
+	eavRangeOffset       field = field{30, sizeofUint8}
+	eavHumidityOffset    field = field{31, sizeofUint8}
+	eavEncodingOffset    field = field{32, sizeofUint8}
+	eavSpareOffset       field = field{33, sizeofUint8}
+	eavFlagOffset        field = field{34, sizeofUint8}
+
+	/*
+		VEH_EVT_APP_ACTIVITY_DETECT 0x6A
+		Offset		Parameter		Type			Description
+		10			battery			float32_t		Battery voltage (Volts)
+		14			temperature		float32_t		Current temperature (C)
+		18			battery%		float32_t		Battery gauge as a percentage
+		22			samples			uint32_t		Sample count
+		26          interval        unit32_t        Interval in seconds beteween samples
+		30			flag			uint8_t			0 = no data
+	*/
+	eadBatteryOffset     field = field{10, sizeofFloat32}
+	eadTemperatureOffset field = field{14, sizeofFloat32}
+	eadBatteryPercOffset field = field{18, sizeofFloat32}
+	eadSamplesOffset     field = field{22, sizeofUint32}
+	eadIntervalOffset    field = field{26, sizeofUint32}
+	eadFlagOffset        field = field{30, sizeofUint8}
+
+	/*
 		VEH_EVT_ERROR 0x05
 		Offset		Parameter		Type			Description
 		10			flag			uint8_t			0 = no data
@@ -265,23 +325,26 @@ var handlers handlersMap
 
 // VehEvent is the base interface
 type VehEvent struct {
-	DataFlag          bool
-	Sequence          uint32
-	Timestamp         uint32
-	EventType         int
-	BootEvent         *VehBootEvent
-	TimeAdjustEvent   *VehTimeAdjustEvent
-	MessageEvent      *VehMessageEvent
-	WatchDogEvent     *VehWatchDogEvent
-	AppErrEvent       *VehAppErrEvent
-	AssertEvent       *VehAssertEvent
-	HardFaultEvent    *VehHardFaultEvent
-	TemperatureEvent  *VehTemperatureEvent
-	VibrationEvent    *VehVibrationEvent
-	MicrophoneEvent   *VehMicrophoneEvent
-	HallEvent         *VehHallEvent
-	ConnectedEvent    *VehConnectedEvent
-	DisconnectedEvent *VehDisconnectedEvent
+	DataFlag            bool
+	Sequence            uint32
+	Timestamp           uint32
+	EventType           int
+	BootEvent           *VehBootEvent
+	TimeAdjustEvent     *VehTimeAdjustEvent
+	MessageEvent        *VehMessageEvent
+	WatchDogEvent       *VehWatchDogEvent
+	AppErrEvent         *VehAppErrEvent
+	AssertEvent         *VehAssertEvent
+	HardFaultEvent      *VehHardFaultEvent
+	TemperatureEvent    *VehTemperatureEvent
+	VibrationEvent      *VehVibrationEvent
+	MicrophoneEvent     *VehMicrophoneEvent
+	HallEvent           *VehHallEvent
+	MagnetometerEvent   *VehMagnetometerEvent
+	AdpcmVibrationEvent *VehAdpcmVibrationEvent
+	ActivityDetectEvent *VehActivityDetectEvent
+	ConnectedEvent      *VehConnectedEvent
+	DisconnectedEvent   *VehDisconnectedEvent
 }
 
 // VehBootEvent structure
@@ -380,6 +443,34 @@ type VehHallEvent struct {
 	BatPercent  float32
 }
 
+type VehMagnetometerEvent struct {
+	Battery     float32
+	Temperature float32
+	Interval    float32
+	BatPercent  float32
+}
+
+type VehAdpcmVibrationEvent struct {
+	Battery     float32
+	Temperature float32
+	Odr         float32
+	Gain        float32
+	BatPercent  float32
+	Range       uint8
+	Humidity    uint8
+	Encoding    uint8
+	Spare       uint8
+	flag        uint8
+}
+
+type VehActivityDetectEvent struct {
+	Battery     float32
+	Temperature float32
+	BatPercent  float32
+	Samples     uint32
+	Interval    uint32
+}
+
 func init() {
 	handlers = make(handlersMap)
 	handlers[VehEventBoot] = newBootEvent
@@ -395,6 +486,9 @@ func init() {
 	handlers[VehEventVibration] = newVibrationEvent
 	handlers[VehEventMicrophone] = newMicrophoneEvent
 	handlers[VehEventHallEffect] = newHallEvent
+	handlers[VehEventMagnetometer] = newMagnetometerEvent
+	handlers[VehEventAdpcmVibration] = newAdpcmVibrationEvent
+	handlers[VehEventActivityDetect] = newActivityDetectEvent
 	handlers[VehEventConnected] = newConnectedEvent
 	handlers[VehEventDisconnected] = newDisconnectedEvent
 	handlers[VehEventError] = newGenericEvent
@@ -572,8 +666,8 @@ func newMicrophoneEvent(b []byte) *VehEvent {
 		Odr:         float32FromBytes(b[emOdrOffset.Start():emOdrOffset.End()]),
 		BatPercent:  0.0,
 	}
-	if l >= emBatteryOffset.End() {
-		eb.MicrophoneEvent.BatPercent = float32FromBytes(b[emBatteryOffset.Start():emBatteryOffset.End()])
+	if l >= emBatteryPercOffset.End() {
+		eb.MicrophoneEvent.BatPercent = float32FromBytes(b[emBatteryPercOffset.Start():emBatteryPercOffset.End()])
 	}
 	return &eb
 }
@@ -589,10 +683,82 @@ func newHallEvent(b []byte) *VehEvent {
 		FirFilter:   binary.LittleEndian.Uint16(b[ehFirFilterOffset.Start():ehFirFilterOffset.End()]),
 		BatPercent:  0.0,
 	}
-	if l >= ehBatteryOffset.End() {
-		eb.MicrophoneEvent.BatPercent = float32FromBytes(b[ehBatteryOffset.Start():ehBatteryOffset.End()])
+	if l >= ehBatteryPercOffset.End() {
+		eb.MicrophoneEvent.BatPercent = float32FromBytes(b[ehBatteryPercOffset.Start():ehBatteryPercOffset.End()])
 	}
 	return &eb
+}
+
+func newMagnetometerEvent(b []byte) *VehEvent {
+	emg, l := newVehEvent(b)
+	emg.MagnetometerEvent = &VehMagnetometerEvent{}
+	if l >= emgBatteryOffset.End() {
+		emg.MagnetometerEvent.Battery = float32FromBytes(b[emgBatteryOffset.Start():emgBatteryOffset.End()])
+	}
+	if l >= emgTemperatureOffset.End() {
+		emg.MagnetometerEvent.Temperature = float32FromBytes(b[emgTemperatureOffset.Start():emgTemperatureOffset.End()])
+	}
+	if l >= emgIntervalOffset.End() {
+		emg.MagnetometerEvent.Interval = float32FromBytes(b[emgIntervalOffset.Start():emgIntervalOffset.End()])
+	}
+	if l >= emgBatteryPercOffset.End() {
+		emg.MagnetometerEvent.BatPercent = float32FromBytes(b[emgBatteryPercOffset.Start():emgBatteryPercOffset.End()])
+	}
+	return &emg
+}
+
+func newAdpcmVibrationEvent(b []byte) *VehEvent {
+	eav, l := newVehEvent(b)
+	eav.AdpcmVibrationEvent = &VehAdpcmVibrationEvent{}
+	if l >= eavBatteryOffset.End() {
+		eav.AdpcmVibrationEvent.Battery = float32FromBytes(b[eavBatteryOffset.Start():eavBatteryOffset.End()])
+	}
+	if l >= eavTemperatureOffset.End() {
+		eav.AdpcmVibrationEvent.Temperature = float32FromBytes(b[eavTemperatureOffset.Start():eavTemperatureOffset.End()])
+	}
+	if l >= eavOdrOffset.End() {
+		eav.AdpcmVibrationEvent.Odr = float32FromBytes(b[eavOdrOffset.Start():eavOdrOffset.End()])
+	}
+	if l >= eavGainOffset.End() {
+		eav.AdpcmVibrationEvent.Gain = float32FromBytes(b[eavGainOffset.Start():eavGainOffset.End()])
+	}
+	if l >= eavBatteryPercOffset.End() {
+		eav.AdpcmVibrationEvent.BatPercent = float32FromBytes(b[eavBatteryPercOffset.Start():eavBatteryPercOffset.End()])
+	}
+	if l >= eavRangeOffset.End() {
+		eav.AdpcmVibrationEvent.Range = uint8(b[eavRangeOffset.Start()])
+	}
+	if l >= eavHumidityOffset.End() {
+		eav.AdpcmVibrationEvent.Humidity = uint8(b[eavHumidityOffset.Start()])
+	}
+	if l >= eavEncodingOffset.End() {
+		eav.AdpcmVibrationEvent.Encoding = uint8(b[eavEncodingOffset.Start()])
+	}
+	if l >= eavSpareOffset.End() {
+		eav.AdpcmVibrationEvent.Spare = uint8(b[eavSpareOffset.Start()])
+	}
+	return &eav
+}
+
+func newActivityDetectEvent(b []byte) *VehEvent {
+	ead, l := newVehEvent(b)
+	ead.ActivityDetectEvent = &VehActivityDetectEvent{}
+	if l >= eadBatteryOffset.End() {
+		ead.ActivityDetectEvent.Battery = float32FromBytes(b[eadBatteryOffset.Start():eadBatteryOffset.End()])
+	}
+	if l >= eadTemperatureOffset.End() {
+		ead.ActivityDetectEvent.Temperature = float32FromBytes(b[eadTemperatureOffset.Start():eadTemperatureOffset.End()])
+	}
+	if l >= eadBatteryOffset.End() {
+		ead.ActivityDetectEvent.BatPercent = float32FromBytes(b[eadBatteryPercOffset.Start():eadBatteryPercOffset.End()])
+	}
+	if l >= eadSamplesOffset.End() {
+		ead.ActivityDetectEvent.Samples = binary.LittleEndian.Uint32(b[eadSamplesOffset.Start():eadSamplesOffset.End()])
+	}
+	if l >= eadIntervalOffset.End() {
+		ead.ActivityDetectEvent.Interval = binary.LittleEndian.Uint32(b[eadIntervalOffset.Start():eadIntervalOffset.End()])
+	}
+	return &ead
 }
 
 func newConnectedEvent(b []byte) *VehEvent {
